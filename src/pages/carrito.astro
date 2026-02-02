@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CartDisplay from '../components/islands/CartDisplay';
+---
+
+<BaseLayout title="Carrito | BY ARENA" description="Revisa tu carrito de compras">
+  <div class="max-w-4xl mx-auto px-4 md:px-8 lg:px-12 py-16">
+    <h1 class="text-4xl font-serif font-bold text-gray-900 mb-12">
+      Carrito de Compras
+    </h1>
+
+    <CartDisplay client:load />
+  </div>
+</BaseLayout>

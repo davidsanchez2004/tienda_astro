@@ -1,0 +1,58 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ContactForm from '../components/islands/ContactForm';
+---
+
+<BaseLayout title="Contacto | BY ARENA" description="Ponte en contacto con nuestro equipo">
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-20">
+    <div class="text-center mb-16">
+      <h1 class="text-5xl md:text-6xl font-serif font-bold text-gray-900 mb-6">
+        Contáctanos
+      </h1>
+      <p class="text-xl text-gray-700">
+        Estamos aquí para ayudarte. Envíanos un mensaje o llámanos.
+      </p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8 mb-16">
+      {/* Email */}
+      <div class="bg-white rounded-lg border border-arena-light p-8 text-center">
+        <div class="text-arena mb-4 flex justify-center">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">Email</h3>
+        <a href="mailto:contact@byarena.com" class="text-arena hover:text-arena-light font-semibold">
+          contact@byarena.com
+        </a>
+      </div>
+
+      {/* Phone */}
+      <div class="bg-white rounded-lg border border-arena-light p-8 text-center">
+        <div class="text-arena mb-4 flex justify-center">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">WhatsApp</h3>
+        <a href="https://wa.me/34600000000" class="text-arena hover:text-arena-light font-semibold">
+          Envíanos un mensaje
+        </a>
+      </div>
+
+      {/* Hours */}
+      <div class="bg-white rounded-lg border border-arena-light p-8 text-center">
+        <div class="text-arena mb-4 flex justify-center">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">Horario</h3>
+        <p class="text-gray-700">
+          L-V: 9:00 - 18:00<br />
+          S-D: Cerrado
+        </p>
+      </div>
+    </div>
+
+    {/* Form */}
+    <div class="max-w-2xl mx-auto">
+      <ContactForm client:load />
+    </div>
+  </div>
+</BaseLayout>

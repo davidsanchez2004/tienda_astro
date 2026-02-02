@@ -1,0 +1,101 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ProductDetail from '../../components/islands/ProductDetail';
+import { supabaseAdminClient } from '../../lib/supabase';
+
+const { id } = Astro.params;
+
+// Get product
+const { data: product, error } = await supabaseAdminClient
+  .from('products')
+  .select('*')
+  .eq('id', id)
+  .eq('active', true)
+  .single();
+
+if (error || !product) {
+  return Astro.redirect('/404');
+}
+
+// Get category names
+let categoryNames: string[] = [];
+if (product.category_ids && product.category_ids.length > 0) {
+  const { data: categories } = await supabaseAdminClient
+    .from('categories')
+    .select('name')
+    .in('id', product.category_ids);
+  
+  if (categories) {
+    categoryNames = categories.map(c => c.name);
+  }
+}
+
+// Get related products (same category, exclude current)
+let relatedProducts: any[] = [];
+if (product.category_ids && product.category_ids.length > 0) {
+  const { data: related } = await supabaseAdminClient
+    .from('products')
+    .select('*')
+    .contains('category_ids', [product.category_ids[0]])
+    .neq('id', product.id)
+    .eq('active', true)
+    .limit(4);
+  
+  if (related) {
+    relatedProducts = related;
+  }
+}
+
+const title = `${product.name} | BY ARENA`;
+const description = product.description || `Descubre ${product.name} en BY ARENA`;
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-8">
+    <!-- Breadcrumb -->
+    <nav class="mb-8">
+      <ol class="flex items-center gap-2 text-sm text-gray-600">
+        <li><a href="/" class="hover:text-arena">Inicio</a></li>
+        <li>/</li>
+        <li><a href="/catalogo" class="hover:text-arena">Catálogo</a></li>
+        <li>/</li>
+        <li class="text-gray-900 font-medium">{product.name}</li>
+      </ol>
+    </nav>
+
+    <!-- Product Detail Component -->
+    <ProductDetail 
+      client:load 
+      product={product} 
+      categoryNames={categoryNames}
+    />
+
+    <!-- Related Products -->
+    {relatedProducts.length > 0 && (
+      <section class="mt-16">
+        <h2 class="text-2xl font-serif font-bold text-gray-900 mb-8">
+          Productos relacionados
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {relatedProducts.map((related) => (
+            <a href={`/producto/${related.id}`} class="group">
+              <div class="aspect-square overflow-hidden rounded-lg bg-arena-pale mb-3">
+                <img
+                  src={related.image_url}
+                  alt={related.name}
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+              <h3 class="font-medium text-gray-900 group-hover:text-arena transition-colors line-clamp-2">
+                {related.name}
+              </h3>
+              <p class="text-arena font-semibold mt-1">
+                €{related.price.toFixed(2)}
+              </p>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+  </div>
+</BaseLayout>

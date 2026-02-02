@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import RegisterForm from '../components/islands/RegisterForm';
+---
+
+<BaseLayout title="Crear Cuenta | BY ARENA" description="Regístrate en BY ARENA y accede a beneficios exclusivos">
+  <div class="min-h-screen bg-gradient-to-br from-arena-pale via-cream to-sand flex items-center justify-center px-4 py-12">
+    <RegisterForm client:load />
+  </div>
+</BaseLayout>

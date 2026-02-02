@@ -1,0 +1,49 @@
+---
+/**
+ * Schema.org BreadcrumbList - Structured Data para SEO
+ * Navegación breadcrumb para mejorar SERP
+ */
+
+interface BreadcrumbItem {
+  name: string;
+  url: string;
+}
+
+interface Props {
+  items: BreadcrumbItem[];
+}
+
+const { items } = Astro.props;
+const siteUrl = 'https://byarena.com';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((item, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: item.name,
+    item: `${siteUrl}${item.url}`,
+  })),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />
+
+<!-- Visual Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="text-sm text-gray-600 mb-4">
+  <ol class="flex items-center gap-2">
+    {items.map((item, index) => (
+      <>
+        {index > 0 && <span class="text-gray-400">/</span>}
+        {index === items.length - 1 ? (
+          <span class="text-arena font-medium">{item.name}</span>
+        ) : (
+          <a href={item.url} class="hover:text-arena transition-colors">
+            {item.name}
+          </a>
+        )}
+      </>
+    ))}
+  </ol>
+</nav>

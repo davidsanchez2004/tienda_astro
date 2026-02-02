@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ReturnForm from '../../components/islands/ReturnForm';
+---
+
+<BaseLayout title="Solicitar Devolución | BY ARENA" description="Gestiona tu devolución">
+  <div class="max-w-2xl mx-auto px-4 md:px-8 lg:px-12 py-16">
+    <h1 class="text-4xl font-serif font-bold text-gray-900 mb-12">
+      Solicitar Devolución
+    </h1>
+
+    <ReturnForm client:load />
+  </div>
+</BaseLayout>

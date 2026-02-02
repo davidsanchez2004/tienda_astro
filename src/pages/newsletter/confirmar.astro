@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const token = Astro.url.searchParams.get('token');
+let result = { success: false, message: '', email: '', discountCode: '' };
+
+if (token) {
+  try {
+    const response = await fetch(`${Astro.url.origin}/api/newsletter/confirm?token=${token}`);
+    result = await response.json();
+  } catch (error) {
+    result = { success: false, message: 'Error al procesar la confirmación', email: '', discountCode: '' };
+  }
+}
+---
+
+<BaseLayout title="Confirmar Suscripción | BY ARENA" description="Confirma tu suscripción al newsletter">
+  <div class="min-h-screen flex items-center justify-center bg-arena-pale py-20">
+    <div class="max-w-md mx-auto px-4">
+      <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+        {result.success ? (
+          <>
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 class="text-3xl font-serif font-bold text-gray-900 mb-4">
+              ¡Suscripción Confirmada!
+            </h1>
+            <p class="text-gray-600 mb-4">
+              ¡Gracias por suscribirte! Te hemos enviado un email con tu código de descuento.
+            </p>
+            
+            {/* Código de descuento destacado */}
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-dashed border-arena rounded-xl p-6 my-6">
+              <p class="text-xs uppercase tracking-widest text-arena mb-2">Tu código de descuento</p>
+              <p class="text-3xl font-bold text-arena tracking-wider font-serif">{result.discountCode || 'BIENVENIDO10'}</p>
+              <p class="text-sm text-gray-600 mt-2">10% de descuento en tu primera compra</p>
+            </div>
+            
+            {result.email && (
+              <p class="text-sm text-gray-500 mb-6">
+                Email: <strong>{result.email}</strong>
+              </p>
+            )}
+            <div class="space-y-3">
+              <a 
+                href="/catalogo" 
+                class="block w-full px-6 py-3 bg-arena text-white rounded-lg font-semibold hover:bg-arena-light transition-colors"
+              >
+                ¡Usar mi descuento ahora!
+              </a>
+              <a 
+                href="/ofertas" 
+                class="block w-full px-6 py-3 border-2 border-arena text-arena rounded-lg font-semibold hover:bg-arena-pale transition-colors"
+              >
+                Ver Ofertas
+              </a>
+            </div>
+          </>
+        ) : (
+          <>
+            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h1 class="text-3xl font-serif font-bold text-gray-900 mb-4">
+              Error de Confirmación
+            </h1>
+            <p class="text-gray-600 mb-6">
+              {result.message || 'El enlace de confirmación no es válido o ha expirado.'}
+            </p>
+            <div class="space-y-3">
+              <a 
+                href="/" 
+                class="block w-full px-6 py-3 bg-arena text-white rounded-lg font-semibold hover:bg-arena-light transition-colors"
+              >
+                Volver al Inicio
+              </a>
+              <p class="text-sm text-gray-500">
+                ¿Necesitas ayuda? <a href="/contacto" class="text-arena hover:underline">Contáctanos</a>
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+</BaseLayout>

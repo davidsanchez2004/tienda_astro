@@ -1,0 +1,40 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import ProductManager from '../../components/admin/ProductManager';
+---
+
+<AdminLayout title="Admin - Gestión de Productos">
+  <div class="min-h-screen bg-gradient-to-br from-arena-pale to-white py-12 px-4">
+    <div class="max-w-6xl mx-auto">
+      {/* Header */}
+      <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-4xl font-bold text-arena mb-2">Gestión de Productos</h1>
+            <p class="text-gray-600">
+              Crea, edita y gestiona los productos de la tienda
+            </p>
+          </div>
+          <a 
+            href="/admin/inicio"
+            class="px-4 py-2 text-arena font-medium hover:text-arena-light transition-colors"
+          >
+            ← Volver
+          </a>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div class="bg-white rounded-lg shadow-lg p-8">
+        <ProductManager client:only="react" adminKey="" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const adminKey = sessionStorage.getItem('adminKey');
+    if (!adminKey) {
+      window.location.href = '/admin/login';
+    }
+  </script>
+</AdminLayout>

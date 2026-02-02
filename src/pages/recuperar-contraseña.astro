@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ForgotPasswordForm from '../components/islands/ForgotPasswordForm';
+---
+
+<BaseLayout title="Recuperar Contraseña | BY ARENA" description="Recupera tu contraseña">
+  <div class="min-h-screen bg-gradient-to-b from-cream to-white py-16">
+    <div class="max-w-md mx-auto px-4">
+      <ForgotPasswordForm client:load />
+    </div>
+  </div>
+</BaseLayout>

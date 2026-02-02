@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const { searchParams } = new URL(Astro.request.url);
+const sessionId = searchParams.get('session_id');
+const orderId = searchParams.get('order_id');
+const email = searchParams.get('email');
+---
+
+<BaseLayout title="Compra Exitosa | BY ARENA" description="Tu pedido ha sido procesado correctamente">
+  <div class="min-h-screen bg-gradient-to-br from-green-50 via-cream to-arena-pale flex items-center justify-center px-4 py-12">
+    <div class="max-w-2xl w-full bg-white rounded-lg border border-green-200 shadow-lg p-8 md:p-12 text-center">
+      {/* Success Icon */}
+      <div class="mb-8 flex justify-center">
+        <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+      </div>
+
+      {/* Title */}
+      <h1 class="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-4">
+        ¡Compra Exitosa!
+      </h1>
+
+      {/* Message */}
+      <p class="text-xl text-gray-600 mb-8">
+        Gracias por tu compra. Tu pedido ha sido procesado correctamente.
+      </p>
+
+      {/* Order Details */}
+      <div class="bg-arena-pale rounded-lg p-6 mb-8 text-left">
+        <h3 class="font-semibold text-gray-900 mb-4">Detalles del Pedido</h3>
+        <div class="space-y-2 text-gray-700">
+          {orderId && (
+            <p>
+              <strong>Número de Orden:</strong> {orderId}
+            </p>
+          )}
+          {sessionId && (
+            <p>
+              <strong>ID de Sesión Stripe:</strong> {sessionId}
+            </p>
+          )}
+          {email && (
+            <p>
+              <strong>Email de Confirmación:</strong> {email}
+            </p>
+          )}
+          <p>
+            <strong>Estado:</strong> <span class="text-green-600 font-semibold">Pagado</span>
+          </p>
+          <p>
+            <strong>Próximo paso:</strong> Recibirás un email con los detalles de tu envío
+          </p>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a
+          href="/cuenta"
+          class="px-8 py-3 bg-arena text-white font-semibold rounded-lg hover:bg-arena-light transition-colors text-center"
+        >
+          Ver Mis Pedidos
+        </a>
+        <a
+          href="/catalogo"
+          class="px-8 py-3 border-2 border-arena text-arena font-semibold rounded-lg hover:bg-arena-pale transition-colors text-center"
+        >
+          Continuar Comprando
+        </a>
+      </div>
+
+      {/* Support */}
+      <div class="mt-12 pt-8 border-t border-arena-light">
+        <p class="text-gray-600 mb-4">¿Tienes preguntas?</p>
+        <a href="https://wa.me/34612345678" class="text-arena font-semibold hover:text-arena-light">
+          Contáctanos por WhatsApp
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

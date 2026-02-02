@@ -1,0 +1,36 @@
+---
+/**
+ * Schema.org Organization - Structured Data para SEO
+ * Datos de la organización BY ARENA
+ */
+
+const siteUrl = 'https://byarena.com';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'BY ARENA',
+  alternateName: 'By Arena Bisutería',
+  url: siteUrl,
+  logo: `${siteUrl}/logo.png`,
+  description: 'Bisutería premium y complementos elegantes diseñados para resaltar tu belleza natural',
+  foundingDate: '2024',
+  contactPoint: {
+    '@type': 'ContactPoint',
+    telephone: '+34-600-000-000',
+    contactType: 'customer service',
+    availableLanguage: ['Spanish', 'English'],
+    areaServed: 'ES',
+  },
+  sameAs: [
+    'https://instagram.com/byarena',
+    'https://tiktok.com/@byarena',
+  ],
+  address: {
+    '@type': 'PostalAddress',
+    addressCountry: 'ES',
+  },
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />

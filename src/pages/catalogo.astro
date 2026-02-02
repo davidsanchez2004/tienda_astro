@@ -1,0 +1,276 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabaseAdminClient } from '../lib/supabase';
+import ProductCard from '../components/islands/ProductCard';
+
+// Get query parameters
+const { searchParams } = new URL(Astro.request.url);
+const categorySlug = searchParams.get('categoria');
+const priceMax = searchParams.get('precio_max') ? parseInt(searchParams.get('precio_max')!) : null;
+const currentPage = parseInt(searchParams.get('pagina') || '1');
+const PRODUCTS_PER_PAGE = 12;
+
+// Get categories for sidebar
+const { data: allCategories } = await supabaseAdminClient
+  .from('categories')
+  .select('*')
+  .order('name');
+
+const categories = allCategories || [];
+
+// Find the selected category by slug
+const selectedCategory = categorySlug ? categories.find((c: any) => c.slug === categorySlug) : null;
+
+// Fetch ALL active products
+const { data: allProducts, error: productsError } = await supabaseAdminClient
+  .from('products')
+  .select('*')
+  .eq('active', true)
+  .order('created_at', { ascending: false });
+
+// Filter products by category if selected
+let filteredProducts = allProducts || [];
+if (selectedCategory) {
+  filteredProducts = filteredProducts.filter((p: any) => 
+    p.category_ids && Array.isArray(p.category_ids) && p.category_ids.includes(selectedCategory.id)
+  );
+}
+
+// Filter by max price if set
+if (priceMax !== null) {
+  filteredProducts = filteredProducts.filter((p: any) => {
+    const productPrice = p.sale_price || p.price;
+    return productPrice <= priceMax;
+  });
+}
+
+// Get price range for slider
+const allPrices = (allProducts || []).map((p: any) => p.sale_price || p.price);
+const maxProductPrice = allPrices.length > 0 ? Math.ceil(Math.max(...allPrices)) : 500;
+const minProductPrice = allPrices.length > 0 ? Math.floor(Math.min(...allPrices)) : 0;
+
+// Pagination
+const totalProducts = filteredProducts.length;
+const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE);
+const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+const products = filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
+
+// Build base URL for pagination and filters
+const buildUrl = (params: { categoria?: string | null; precio_max?: number | null; pagina?: number }) => {
+  const urlParams = new URLSearchParams();
+  if (params.categoria) urlParams.set('categoria', params.categoria);
+  if (params.precio_max !== null && params.precio_max !== undefined) urlParams.set('precio_max', params.precio_max.toString());
+  if (params.pagina && params.pagina > 1) urlParams.set('pagina', params.pagina.toString());
+  const queryString = urlParams.toString();
+  return queryString ? `/catalogo?${queryString}` : '/catalogo';
+};
+
+const getPageUrl = (page: number) => buildUrl({ categoria: categorySlug, precio_max: priceMax, pagina: page });
+---
+
+<BaseLayout title="Catálogo | BY ARENA" description="Explora nuestro completo catálogo de bisutería y complementos premium">
+  <div class="bg-arena-pale py-12 border-b border-arena-light">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12">
+      <h1 class="text-4xl font-serif font-bold text-gray-900">
+        {selectedCategory ? selectedCategory.name : 'Catálogo Completo'}
+      </h1>
+      <p class="text-gray-600 mt-2">
+        {products?.length || 0} productos disponibles
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-12">
+    <div class="grid lg:grid-cols-4 gap-12">
+      {/* Sidebar - Filtros */}
+      <aside class="lg:col-span-1">
+        <div class="bg-white rounded-lg border border-arena-light p-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-6">Categorías</h3>
+          <ul class="space-y-3">
+            <li>
+              <a
+                href="/catalogo"
+                class={`font-medium transition-colors ${
+                  !categorySlug
+                    ? 'text-arena'
+                    : 'text-gray-600 hover:text-arena'
+                }`}
+              >
+                Todos los productos
+              </a>
+            </li>
+            {categories?.map((cat: any) => (
+              <li>
+                <a
+                  href={`/catalogo?categoria=${cat.slug}`}
+                  class={`font-medium transition-colors ${
+                    categorySlug === cat.slug
+                      ? 'text-arena'
+                      : 'text-gray-600 hover:text-arena'
+                  }`}
+                >
+                  {cat.name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Filtros adicionales */}
+        <div class="bg-white rounded-lg border border-arena-light p-6 mt-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Filtrar por precio</h3>
+          <form id="price-filter-form" method="get" action="/catalogo">
+            {/* Mantener categoría si está seleccionada */}
+            {categorySlug && <input type="hidden" name="categoria" value={categorySlug} />}
+            
+            <div class="space-y-4">
+              <div class="flex items-center gap-2">
+                <span class="text-gray-500 text-sm">Hasta</span>
+                <div class="relative flex-1">
+                  <input 
+                    type="number" 
+                    min="0"
+                    max={maxProductPrice}
+                    value={priceMax ?? maxProductPrice}
+                    step="1"
+                    class="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-arena text-center font-semibold" 
+                    id="price-input"
+                    name="precio_max"
+                    placeholder="Precio máx"
+                  />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">€</span>
+                </div>
+              </div>
+              
+              <p class="text-xs text-gray-500 text-center">
+                Precio máximo: {maxProductPrice}€
+              </p>
+              
+              <button 
+                type="submit"
+                class="w-full py-2 bg-arena text-white rounded-lg font-medium hover:bg-arena-light transition-colors"
+              >
+                Aplicar filtro
+              </button>
+              
+              {priceMax !== null && (
+                <a 
+                  href={buildUrl({ categoria: categorySlug, precio_max: null, pagina: 1 })}
+                  class="block w-full py-2 text-center text-arena border border-arena rounded-lg font-medium hover:bg-arena-pale transition-colors"
+                >
+                  Quitar filtro
+                </a>
+              )}
+            </div>
+          </form>
+        </div>
+      </aside>
+
+      {/* Grid de productos */}
+      <main class="lg:col-span-3">
+        {/* Info de productos */}
+        <div class="flex justify-between items-center mb-6">
+          <p class="text-gray-600">
+            {totalProducts > 0 
+              ? `Mostrando ${startIndex + 1}-${Math.min(startIndex + PRODUCTS_PER_PAGE, totalProducts)} de ${totalProducts} productos`
+              : 'No hay productos que coincidan'
+            }
+          </p>
+          <div class="flex gap-2 items-center flex-wrap">
+            {priceMax && (
+              <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                Hasta {priceMax}€
+                <a href={buildUrl({ categoria: categorySlug, precio_max: null, pagina: 1 })} class="ml-1 hover:text-amber-600">✕</a>
+              </span>
+            )}
+            {selectedCategory && (
+              <span class="bg-arena/10 text-arena px-3 py-1 rounded-full text-sm font-medium">
+                {selectedCategory.name}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {products && products.length > 0 ? (
+          <Fragment>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {products.map((product) => (
+                <ProductCard product={product} client:load />
+              ))}
+            </div>
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <nav class="mt-12 flex justify-center items-center gap-2" aria-label="Paginación">
+                {/* Botón Anterior */}
+                {currentPage > 1 ? (
+                  <a
+                    href={getPageUrl(currentPage - 1)}
+                    class="px-4 py-2 border border-arena rounded-lg text-arena hover:bg-arena hover:text-white transition-colors flex items-center gap-2"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Anterior
+                  </a>
+                ) : (
+                  <span class="px-4 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Anterior
+                  </span>
+                )}
+
+                {/* Números de página - simplificado */}
+                <div class="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    page === currentPage ? (
+                      <span class="px-4 py-2 bg-arena text-white rounded-lg font-semibold">
+                        {page}
+                      </span>
+                    ) : (
+                      <a
+                        href={getPageUrl(page)}
+                        class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:border-arena hover:text-arena transition-colors"
+                      >
+                        {page}
+                      </a>
+                    )
+                  ))}
+                </div>
+
+                {/* Botón Siguiente */}
+                {currentPage < totalPages ? (
+                  <a
+                    href={getPageUrl(currentPage + 1)}
+                    class="px-4 py-2 border border-arena rounded-lg text-arena hover:bg-arena hover:text-white transition-colors flex items-center gap-2"
+                  >
+                    Siguiente
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                ) : (
+                  <span class="px-4 py-2 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed flex items-center gap-2">
+                    Siguiente
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                )}
+              </nav>
+            )}
+          </Fragment>
+        ) : (
+          <div class="text-center py-12">
+            <p class="text-lg text-gray-600 mb-4">No hay productos disponibles</p>
+            <a href="/catalogo" class="text-arena font-semibold hover:text-arena-light">
+              Ver todos los productos
+            </a>
+          </div>
+        )}
+      </main>
+    </div>
+  </div>
+</BaseLayout>

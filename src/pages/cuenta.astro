@@ -1,0 +1,16 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import UserProfile from '../components/islands/UserProfile';
+---
+
+<BaseLayout title="Mi Cuenta | BY ARENA" description="Gestiona tu cuenta y pedidos">
+  <div class="bg-arena-pale py-8 border-b border-arena-light">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12">
+      <h1 class="text-3xl font-serif font-bold text-gray-900">Mi Cuenta</h1>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-12">
+    <UserProfile client:load />
+  </div>
+</BaseLayout>

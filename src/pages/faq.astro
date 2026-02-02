@@ -1,0 +1,207 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const faqs = [
+  {
+    category: 'Pedidos y Envíos',
+    questions: [
+      {
+        q: '¿Cuánto tarda en llegar mi pedido?',
+        a: 'Los pedidos se procesan en 24-48 horas. El envío estándar tarda 2-3 días laborables en España peninsular. Para Baleares, Canarias y otros destinos, consulta los tiempos estimados al finalizar tu compra.'
+      },
+      {
+        q: '¿Cuánto cuesta el envío?',
+        a: 'El envío es GRATIS para pedidos superiores a 50€. Para pedidos inferiores, el envío estándar tiene un coste de 4,95€.'
+      },
+      {
+        q: '¿Cómo puedo rastrear mi pedido?',
+        a: 'Una vez que tu pedido sea enviado, recibirás un email con el número de seguimiento. También puedes acceder a la sección "Mis Pedidos" en tu cuenta para ver el estado actualizado.'
+      },
+      {
+        q: '¿Hacéis envíos internacionales?',
+        a: 'Sí, realizamos envíos a toda Europa. Los tiempos y costes varían según el destino. Contacta con nosotros para más información sobre envíos fuera de España.'
+      }
+    ]
+  },
+  {
+    category: 'Devoluciones y Cambios',
+    questions: [
+      {
+        q: '¿Cuál es vuestra política de devoluciones?',
+        a: 'Aceptamos devoluciones en un plazo de 30 días desde la recepción del pedido. El producto debe estar sin usar y en su embalaje original. Los pendientes no son elegibles para devolución por motivos de higiene.'
+      },
+      {
+        q: '¿Cómo solicito una devolución?',
+        a: 'Puedes iniciar una devolución desde la sección "Mis Pedidos" en tu cuenta, o contactándonos por email a devoluciones@byarena.com con tu número de pedido.'
+      },
+      {
+        q: '¿Cuánto tardan en procesarse los reembolsos?',
+        a: 'Una vez recibido el producto, procesamos el reembolso en 3-5 días laborables. El tiempo que tarde en reflejarse en tu cuenta depende de tu banco.'
+      }
+    ]
+  },
+  {
+    category: 'Productos',
+    questions: [
+      {
+        q: '¿Los productos contienen níquel?',
+        a: 'Todos nuestros productos son libres de níquel y cumplen con la normativa europea sobre joyería. Son aptos para pieles sensibles.'
+      },
+      {
+        q: '¿Cómo cuido mis joyas de bisutería?',
+        a: 'Recomendamos guardar las piezas en su bolsa o caja original, evitar el contacto con agua, perfumes y cremas. Limpia suavemente con un paño seco después de cada uso.'
+      },
+      {
+        q: '¿Ofrecéis garantía en los productos?',
+        a: 'Sí, todos nuestros productos tienen una garantía de 6 meses contra defectos de fabricación. Si encuentras algún problema, contáctanos y lo resolveremos.'
+      }
+    ]
+  },
+  {
+    category: 'Pagos',
+    questions: [
+      {
+        q: '¿Qué métodos de pago aceptáis?',
+        a: 'Aceptamos tarjetas de crédito/débito (Visa, Mastercard, American Express), PayPal, Apple Pay, Google Pay y Klarna para pago a plazos.'
+      },
+      {
+        q: '¿Es seguro comprar en vuestra web?',
+        a: 'Absolutamente. Utilizamos encriptación SSL y procesamos los pagos a través de Stripe, uno de los procesadores de pago más seguros del mundo. Nunca almacenamos los datos de tu tarjeta.'
+      },
+      {
+        q: '¿Puedo pagar a plazos?',
+        a: 'Sí, ofrecemos pago a plazos sin intereses a través de Klarna para pedidos superiores a 35€. Puedes dividir tu compra en 3 pagos.'
+      }
+    ]
+  },
+  {
+    category: 'Cuenta y Programa de Lealtad',
+    questions: [
+      {
+        q: '¿Cómo funciona el programa de puntos?',
+        a: 'Por cada euro que gastes, acumulas 1 punto. Al llegar a 100 puntos, obtienes 5€ de descuento. También ganas puntos por registrarte, dejar reseñas y referir amigos.'
+      },
+      {
+        q: '¿Cómo uso mis puntos?',
+        a: 'En el checkout, verás la opción de canjear tus puntos. Se aplicará automáticamente el descuento correspondiente a tu pedido.'
+      },
+      {
+        q: '¿Los puntos caducan?',
+        a: 'Los puntos tienen una validez de 12 meses desde la fecha de obtención. Te avisaremos por email antes de que caduquen.'
+      }
+    ]
+  }
+];
+---
+
+<BaseLayout 
+  title="Preguntas Frecuentes | BY ARENA" 
+  description="Respuestas a las preguntas más frecuentes sobre pedidos, envíos, devoluciones y más"
+>
+  {/* Hero */}
+  <section class="bg-gradient-to-br from-arena-pale to-cream py-16 px-4">
+    <div class="max-w-4xl mx-auto text-center">
+      <h1 class="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-4">
+        Preguntas Frecuentes
+      </h1>
+      <p class="text-lg text-gray-600">
+        Encuentra respuestas a las preguntas más comunes
+      </p>
+    </div>
+  </section>
+
+  {/* Search */}
+  <section class="py-8 px-4 border-b border-gray-200 sticky top-16 bg-white z-10">
+    <div class="max-w-2xl mx-auto">
+      <div class="relative">
+        <input 
+          type="text" 
+          placeholder="Buscar en las preguntas frecuentes..."
+          class="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-arena"
+          id="faq-search"
+        />
+        <svg class="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  {/* FAQ Content */}
+  <section class="py-12 px-4 md:px-8 max-w-4xl mx-auto">
+    {faqs.map((category) => (
+      <div class="mb-12">
+        <h2 class="text-2xl font-serif font-bold text-gray-900 mb-6 flex items-center gap-3">
+          <span class="w-1 h-8 bg-arena rounded-full"></span>
+          {category.category}
+        </h2>
+        
+        <div class="space-y-4">
+          {category.questions.map((faq, index) => (
+            <details class="group bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <summary class="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                <span class="font-medium text-gray-900 pr-4">{faq.q}</span>
+                <svg class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </summary>
+              <div class="px-4 pb-4 text-gray-600 border-t border-gray-100 pt-4">
+                {faq.a}
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+    ))}
+  </section>
+
+  {/* Still Need Help */}
+  <section class="py-16 px-4 bg-arena-pale">
+    <div class="max-w-2xl mx-auto text-center">
+      <div class="text-arena mb-4 flex justify-center">
+        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      </div>
+      <h2 class="text-2xl font-serif font-bold text-gray-900 mb-4">
+        ¿No encuentras lo que buscas?
+      </h2>
+      <p class="text-gray-600 mb-8">
+        Nuestro equipo de atención al cliente está aquí para ayudarte
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a 
+          href="/contacto"
+          class="px-6 py-3 bg-arena text-white font-semibold rounded-lg hover:bg-arena-light transition-colors"
+        >
+          Contactar
+        </a>
+        <a 
+          href="https://wa.me/34600000000"
+          target="_blank"
+          class="px-6 py-3 border-2 border-arena text-arena font-semibold rounded-lg hover:bg-arena hover:text-white transition-colors flex items-center justify-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.67-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"></path>
+          </svg>
+          WhatsApp
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // Simple FAQ search functionality
+  document.getElementById('faq-search')?.addEventListener('input', (e) => {
+    const searchTerm = (e.target as HTMLInputElement).value.toLowerCase();
+    const details = document.querySelectorAll('details');
+    
+    details.forEach(detail => {
+      const text = detail.textContent?.toLowerCase() || '';
+      if (searchTerm && !text.includes(searchTerm)) {
+        detail.style.display = 'none';
+      } else {
+        detail.style.display = 'block';
+      }
+    });
+  });
+</script>

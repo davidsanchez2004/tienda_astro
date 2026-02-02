@@ -1,0 +1,213 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabaseAdminClient } from '../lib/supabase';
+import NewsletterForm from '../components/islands/NewsletterForm';
+
+// Fetch blog posts from Supabase
+const { data: dbPosts } = await supabaseAdminClient
+  .from('blog_posts')
+  .select('*')
+  .eq('published', true)
+  .order('published_at', { ascending: false });
+
+// Fallback posts if database is empty
+const fallbackPosts = [
+  {
+    id: '1',
+    slug: 'tendencias-bisuteria-2026',
+    title: 'Las Tendencias de Bisutería para 2026',
+    excerpt: 'Descubre las tendencias que marcarán este año: colores vibrantes, diseños minimalistas y materiales sostenibles.',
+    image: '/blog/tendencias-2026.jpg',
+    category: 'Tendencias',
+    author: 'BY ARENA',
+    date: '2026-01-15',
+    readTime: '5 min'
+  },
+  {
+    id: 2,
+    slug: 'cuidar-joyas-bisuteria',
+    title: 'Cómo Cuidar tus Joyas de Bisutería',
+    excerpt: 'Consejos prácticos para mantener tus accesorios brillantes y en perfecto estado durante más tiempo.',
+    image: '/blog/cuidado-joyas.jpg',
+    category: 'Consejos',
+    author: 'BY ARENA',
+    date: '2026-01-10',
+    readTime: '4 min'
+  },
+  {
+    id: 3,
+    slug: 'combinar-accesorios-outfit',
+    title: 'Cómo Combinar Accesorios con tu Outfit',
+    excerpt: 'Aprende las reglas básicas para combinar collares, pulseras y pendientes con cualquier estilo.',
+    image: '/blog/combinar-accesorios.jpg',
+    category: 'Estilo',
+    author: 'BY ARENA',
+    date: '2026-01-05',
+    readTime: '6 min'
+  },
+  {
+    id: 4,
+    slug: 'historia-bisuteria',
+    title: 'La Historia de la Bisutería: Del Antiguo Egipto a Hoy',
+    excerpt: 'Un fascinante recorrido por la evolución de los accesorios a través de los siglos.',
+    image: '/blog/historia.jpg',
+    category: 'Cultura',
+    author: 'BY ARENA',
+    date: '2025-12-20',
+    readTime: '8 min'
+  },
+  {
+    id: 5,
+    slug: 'regalo-perfecto-bisuteria',
+    title: 'Cómo Elegir el Regalo Perfecto de Bisutería',
+    excerpt: 'Guía completa para acertar siempre al regalar joyas y accesorios a tus seres queridos.',
+    image: '/blog/regalos.jpg',
+    category: 'Guías',
+    author: 'BY ARENA',
+    date: '2025-12-15',
+    readTime: '5 min'
+  },
+  {
+    id: 6,
+    slug: 'sostenibilidad-moda',
+    title: 'Sostenibilidad en la Moda: Nuestro Compromiso',
+    excerpt: 'Conoce cómo en BY ARENA trabajamos para reducir nuestro impacto ambiental.',
+    image: '/blog/sostenibilidad.jpg',
+    category: 'Sostenibilidad',
+    author: 'BY ARENA',
+    date: '2025-12-10',
+    readTime: '4 min'
+  }
+];
+
+// Use database posts if available, otherwise fallback
+const posts = (dbPosts && dbPosts.length > 0) 
+  ? dbPosts.map(p => ({
+      id: p.id,
+      slug: p.slug,
+      title: p.title,
+      excerpt: p.excerpt,
+      image: p.image_url,
+      category: p.category,
+      author: p.author,
+      date: p.published_at || p.created_at,
+      readTime: p.read_time
+    }))
+  : fallbackPosts;
+
+const categories = ['Todas', 'Tendencias', 'Consejos', 'Estilo', 'Cultura', 'Guías', 'Sostenibilidad'];
+---
+
+<BaseLayout 
+  title="Blog | BY ARENA" 
+  description="Artículos sobre tendencias, consejos de estilo y todo sobre bisutería y accesorios"
+>
+  {/* Hero */}
+  <section class="bg-gradient-to-br from-arena-pale to-cream py-20 px-4">
+    <div class="max-w-4xl mx-auto text-center">
+      <h1 class="text-5xl font-serif font-bold text-gray-900 mb-4">
+        Blog BY ARENA
+      </h1>
+      <p class="text-xl text-gray-600">
+        Inspiración, tendencias y consejos para brillar cada día
+      </p>
+    </div>
+  </section>
+
+  {/* Categories */}
+  <section class="border-b border-gray-200 sticky top-16 bg-white z-10">
+    <div class="max-w-7xl mx-auto px-4 md:px-8">
+      <div class="flex gap-4 overflow-x-auto py-4 scrollbar-hide">
+        {categories.map((cat, i) => (
+          <button 
+            class={`px-4 py-2 rounded-full whitespace-nowrap transition-colors ${i === 0 ? 'bg-arena text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* Featured Post */}
+  <section class="py-12 px-4 md:px-8 max-w-7xl mx-auto">
+    <article class="grid md:grid-cols-2 gap-8 bg-white rounded-2xl overflow-hidden shadow-lg">
+      <div class="aspect-video md:aspect-auto bg-gradient-to-br from-arena/20 to-gold/20 flex items-center justify-center">
+        <svg class="w-16 h-16 text-arena/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+      </div>
+      <div class="p-8 flex flex-col justify-center">
+        <span class="inline-block px-3 py-1 bg-arena/10 text-arena text-sm font-medium rounded-full mb-4 w-fit">
+          {posts[0].category}
+        </span>
+        <h2 class="text-3xl font-serif font-bold text-gray-900 mb-4">
+          {posts[0].title}
+        </h2>
+        <p class="text-gray-600 mb-6">
+          {posts[0].excerpt}
+        </p>
+        <div class="flex items-center gap-4 text-sm text-gray-500 mb-6">
+          <span>{posts[0].author}</span>
+          <span>•</span>
+          <span>{new Date(posts[0].date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+          <span>•</span>
+          <span>{posts[0].readTime} lectura</span>
+        </div>
+        <a 
+          href={`/blog/${posts[0].slug}`}
+          class="inline-block px-6 py-3 bg-arena text-white font-semibold rounded-lg hover:bg-arena-light transition-colors w-fit"
+        >
+          Leer Artículo
+        </a>
+      </div>
+    </article>
+  </section>
+
+  {/* Posts Grid */}
+  <section class="py-12 px-4 md:px-8 max-w-7xl mx-auto">
+    <h2 class="text-2xl font-serif font-bold text-gray-900 mb-8">
+      Últimos Artículos
+    </h2>
+    
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {posts.slice(1).map((post) => (
+        <article class="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow group">
+          <div class="aspect-video bg-gradient-to-br from-arena/10 to-gold/10 flex items-center justify-center">
+            <svg class="w-10 h-10 text-arena/20 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+          </div>
+          <div class="p-6">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="px-2 py-1 bg-arena/10 text-arena text-xs font-medium rounded">
+                {post.category}
+              </span>
+              <span class="text-xs text-gray-500">{post.readTime}</span>
+            </div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2 group-hover:text-arena transition-colors">
+              <a href={`/blog/${post.slug}`}>
+                {post.title}
+              </a>
+            </h3>
+            <p class="text-gray-600 text-sm mb-4 line-clamp-2">
+              {post.excerpt}
+            </p>
+            <div class="text-xs text-gray-500">
+              {new Date(post.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  {/* Newsletter CTA */}
+  <section class="py-16 px-4 md:px-8 bg-arena">
+    <div class="max-w-2xl mx-auto text-center">
+      <h2 class="text-3xl font-serif font-bold text-white mb-4">
+        No te pierdas nada
+      </h2>
+      <p class="text-white/80 mb-8">
+        Suscríbete a nuestro newsletter y recibe los últimos artículos directamente en tu email
+      </p>
+      <NewsletterForm source="blog" client:load />
+    </div>
+  </section>
+</BaseLayout>

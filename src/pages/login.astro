@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LoginForm from '../components/islands/LoginForm';
+---
+
+<BaseLayout title="Inicia Sesión | BY ARENA" description="Accede a tu cuenta en BY ARENA">
+  <div class="min-h-screen bg-gradient-to-br from-arena-pale via-cream to-sand flex items-center justify-center px-4 py-12">
+    <LoginForm client:load />
+  </div>
+</BaseLayout>

@@ -1,0 +1,266 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabaseAdminClient } from '../lib/supabase';
+import ProductCarousel from '../components/islands/ProductCarousel';
+import NewsletterForm from '../components/islands/NewsletterForm';
+
+// Fetch all active products for carousel (usando admin client para evitar RLS)
+const { data: allProducts } = await supabaseAdminClient
+  .from('products')
+  .select('*, categories(name)')
+  .eq('active', true)
+  .order('created_at', { ascending: false })
+  .limit(12);
+
+// Fetch featured products
+const { data: featuredProducts } = await supabaseAdminClient
+  .from('products')
+  .select('*, categories(name)')
+  .eq('featured', true)
+  .eq('active', true)
+  .limit(8);
+
+// Fetch categories
+const { data: categories } = await supabaseAdminClient
+  .from('categories')
+  .select('*')
+  .order('name');
+
+const carouselProducts = allProducts || [];
+const featured = featuredProducts || [];
+
+// Categorías con iconos SVG sofisticados (sin emojis)
+const categoryData = [
+  { name: 'Collares', slug: 'collares', color: 'from-amber-100 to-amber-50', image: '/categories/collares.jpg' },
+  { name: 'Pulseras', slug: 'pulseras', color: 'from-rose-100 to-rose-50', image: '/categories/pulseras.jpg' },
+  { name: 'Pendientes', slug: 'pendientes', color: 'from-purple-100 to-purple-50', image: '/categories/pendientes.jpg' },
+  { name: 'Bolsos', slug: 'bolsos', color: 'from-orange-100 to-orange-50', image: '/categories/bolsos.jpg' },
+  { name: 'Perfumes', slug: 'perfumes', color: 'from-pink-100 to-pink-50', image: '/categories/perfumes.jpg' },
+  { name: 'Otros', slug: 'otros', color: 'from-teal-100 to-teal-50', image: '/categories/otros.jpg' },
+];
+
+// Iconos SVG para categorías
+const categoryIcons: Record<string, string> = {
+  collares: `<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3c-4.97 0-9 2.69-9 6v1c0 3.31 4.03 6 9 6s9-2.69 9-6V9c0-3.31-4.03-6-9-6z"/><circle cx="12" cy="16" r="2" stroke-width="1.5"/></svg>`,
+  pulseras: `<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" stroke-width="1.5"/><circle cx="12" cy="12" r="5" stroke-width="1.5"/></svg>`,
+  pendientes: `<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v4m0 0c-2 0-4 2-4 5s2 5 4 5 4-2 4-5-2-5-4-5z"/><circle cx="12" cy="16" r="2" stroke-width="1.5"/></svg>`,
+  bolsos: `<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>`,
+  perfumes: `<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 3h6v3H9V3zM7 6h10v2H7V6zM6 8h12v12a2 2 0 01-2 2H8a2 2 0 01-2-2V8z"/><path stroke-width="1.5" d="M12 2v1M10 1h4"/></svg>`,
+  otros: `<svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3l14 9-14 9V3z"/><circle cx="12" cy="12" r="3" stroke-width="1.5"/></svg>`,
+};
+---
+
+<BaseLayout>
+  {/* Hero Section */}
+  <section class="relative h-screen md:h-[750px] flex items-center justify-center overflow-hidden">
+    {/* Imagen de fondo de arena con degradado inferior */}
+    <div class="absolute inset-0">
+      <img 
+        src="/arena.png" 
+        alt="Arena de playa" 
+        class="w-full h-full object-cover object-bottom"
+      />
+      {/* Degradado inferior extenso para transición suave */}
+      <div class="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-[#FAF8F5] via-[#FAF8F5]/80 to-transparent"></div>
+    </div>
+
+    <div class="relative z-10 max-w-4xl mx-auto px-4 text-center animate-slideIn -mt-20">
+      <span class="inline-block px-6 py-2.5 bg-[#D4C5B9]/80 backdrop-blur-sm text-white font-medium rounded-full text-sm mb-6 shadow-md">
+        Nueva Colección 2026
+      </span>
+      <h1 class="text-5xl md:text-7xl font-serif font-bold text-gray-900 mb-6 drop-shadow-sm">
+        BY ARENA
+      </h1>
+      <p class="text-xl md:text-2xl text-gray-800 mb-8 max-w-2xl mx-auto italic drop-shadow-sm">
+        Bisutería premium y complementos elegantes diseñados para resaltar tu belleza natural
+      </p>
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-stretch w-full max-w-2xl mx-auto">
+        <a
+          href="/catalogo"
+          class="flex-1 px-8 py-4 bg-[#D4C5B9] text-white font-semibold rounded-xl hover:bg-[#C4B5A9] transition-all hover:scale-105 text-lg shadow-lg text-center flex items-center justify-center"
+        >
+          Explorar Catálogo
+        </a>
+        <a
+          href="/ofertas"
+          class="flex-1 px-8 py-4 bg-[#D4C5B9] text-white font-semibold rounded-xl hover:bg-[#C4B5A9] transition-all hover:scale-105 text-lg shadow-lg text-center flex items-center justify-center"
+        >
+          Ver Ofertas
+        </a>
+      </div>
+    </div>
+
+    {/* Scroll indicator - oculto porque el degradado ya ocupa la parte inferior */}
+  </section>
+
+  {/* Product Carousel */}
+  <section class="py-16 px-4 md:px-8 lg:px-12 max-w-7xl mx-auto -mt-8">
+    <ProductCarousel 
+      products={carouselProducts.map(p => ({
+        ...p,
+        category: p.categories
+      }))} 
+      title="Descubre Nuestra Colección"
+      client:load 
+    />
+  </section>
+
+  {/* Categories Grid - 6 categorías */}
+  <section class="py-20 px-4 md:px-8 lg:px-12 bg-gradient-to-b from-white to-arena-pale">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-4xl font-serif font-bold text-gray-900 mb-4">
+          Nuestras Categorías
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          Explora nuestra colección completa de bisutería y accesorios premium
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+        {categoryData.map((cat) => (
+          <a 
+            href={`/catalogo?categoria=${cat.slug}`}
+            class={`group relative p-6 bg-gradient-to-br ${cat.color} rounded-2xl border border-white/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 text-center`}
+          >
+            <div class="text-arena mb-3 flex justify-center group-hover:scale-110 transition-transform duration-300" set:html={categoryIcons[cat.slug]} />
+            <h3 class="text-lg font-semibold text-gray-900 group-hover:text-arena transition-colors">
+              {cat.name}
+            </h3>
+            <div class="absolute inset-0 bg-arena/0 group-hover:bg-arena/5 rounded-2xl transition-colors"></div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* Featured Products Section */}
+  {featured.length > 0 && (
+    <section class="py-20 px-4 md:px-8 lg:px-12 max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <span class="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 text-gold font-medium rounded-full text-sm mb-4">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Selección Especial
+        </span>
+        <h2 class="text-4xl font-serif font-bold text-gray-900 mb-4">
+          Productos Destacados
+        </h2>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+          Nuestra selección curada de las piezas más especiales
+        </p>
+      </div>
+
+      <ProductCarousel 
+        products={featured.map(p => ({
+          ...p,
+          category: p.categories
+        }))} 
+        title=""
+        autoPlay={false}
+        client:load 
+      />
+
+      <div class="text-center mt-12">
+        <a
+          href="/catalogo"
+          class="inline-block px-8 py-3 border-2 border-arena text-arena font-semibold rounded-lg hover:bg-arena hover:text-white transition-all"
+        >
+          Ver Todo el Catálogo
+        </a>
+      </div>
+    </section>
+  )}
+
+  {/* Why Choose Us */}
+  <section class="py-20 px-4 md:px-8 lg:px-12 bg-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl font-serif font-bold text-gray-900 mb-4">
+          ¿Por qué elegirnos?
+        </h2>
+      </div>
+
+      <div class="grid md:grid-cols-4 gap-8">
+        {[
+          { 
+            icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>`,
+            title: 'Calidad Premium', 
+            description: 'Materiales cuidadosamente seleccionados para durabilidad y elegancia' 
+          },
+          { 
+            icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>`,
+            title: 'Diseño Exclusivo', 
+            description: 'Colecciones únicas diseñadas con pasión y atención al detalle' 
+          },
+          { 
+            icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>`,
+            title: 'Envío Rápido', 
+            description: 'Envío gratis a partir de 50€. Entrega en 2-3 días hábiles' 
+          },
+          { 
+            icon: `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+            title: 'Garantía Total', 
+            description: 'Devolución sin preguntas en 30 días. Tu satisfacción es nuestra prioridad' 
+          }
+        ].map((benefit) => (
+          <div class="p-8 text-center bg-arena-pale/50 rounded-2xl hover:bg-arena-pale transition-colors">
+            <div class="text-arena mb-4 flex justify-center" set:html={benefit.icon}></div>
+            <h3 class="text-xl font-semibold text-gray-900 mb-3">{benefit.title}</h3>
+            <p class="text-gray-600">{benefit.description}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* Social Proof / Instagram */}
+  <section class="py-20 px-4 md:px-8 lg:px-12 bg-arena-pale">
+    <div class="max-w-7xl mx-auto text-center">
+      <h2 class="text-4xl font-serif font-bold text-gray-900 mb-4">
+        Síguenos en Redes
+      </h2>
+      <p class="text-lg text-gray-600 mb-8">
+        Únete a nuestra comunidad y descubre las últimas tendencias
+      </p>
+      
+      <div class="flex justify-center gap-6 mb-8">
+        <a 
+          href="https://instagram.com/by__arena" 
+          target="_blank"
+          class="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
+        >
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+          @by__arena
+        </a>
+        <a 
+          href="https://tiktok.com/@by__arena" 
+          target="_blank"
+          class="flex items-center gap-3 px-6 py-3 bg-black text-white font-semibold rounded-lg hover:opacity-90 transition-opacity"
+        >
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+          </svg>
+          @by__arena
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {/* Newsletter */}
+  <section class="py-16 px-4 md:px-8 lg:px-12 bg-arena text-white">
+    <div class="max-w-2xl mx-auto text-center">
+      <h2 class="text-3xl font-serif font-bold mb-4">
+        Suscríbete a Nuestro Newsletter
+      </h2>
+      <p class="mb-8 text-white/80">
+        Recibe ofertas exclusivas, novedades y un 10% de descuento en tu primera compra
+      </p>
+      <NewsletterForm source="home" client:load />
+      <p class="text-sm text-white/90 mt-4">
+        Al suscribirte aceptas nuestra <a href="/privacidad" class="underline hover:text-gold">política de privacidad</a>
+      </p>
+    </div>
+  </section>
+</BaseLayout>

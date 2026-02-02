@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabaseAdminClient } from '../lib/supabase';
+import ProductCard from '../components/islands/ProductCard';
+import NewsletterForm from '../components/islands/NewsletterForm';
+
+// Fetch products on offer
+const { data: products } = await supabaseAdminClient
+  .from('products')
+  .select('*')
+  .eq('on_offer', true)
+  .eq('active', true)
+  .order('created_at', { ascending: false });
+---
+
+<BaseLayout title="Ofertas | BY ARENA" description="Descubre nuestras ofertas especiales">
+  <div class="bg-gradient-to-r from-arena-pale to-sand py-16 border-b border-arena-light">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12">
+      <h1 class="text-5xl md:text-6xl font-serif font-bold text-gray-900 mb-4">
+        Ofertas Especiales
+      </h1>
+      <p class="text-xl text-gray-700">
+        Descuentos exclusivos en productos seleccionados
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-20">
+    {products && products.length > 0 ? (
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {products.map((product) => (
+          <ProductCard product={product} client:load />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-12">
+        <p class="text-lg text-gray-600 mb-4">No hay ofertas disponibles en este momento</p>
+        <a href="/catalogo" class="text-arena font-semibold hover:text-arena-light">
+          Ver catálogo completo
+        </a>
+      </div>
+    )}
+  </div>
+
+  {/* Banner promcional */}
+  <div class="bg-arena text-white py-16">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 text-center">
+      <h2 class="text-4xl font-serif font-bold mb-4">
+        ¿Buscas algo específico?
+      </h2>
+      <p class="text-xl mb-8">
+        Suscríbete a nuestro newsletter para recibir ofertas exclusivas
+      </p>
+      <div class="max-w-md mx-auto">
+        <NewsletterForm source="ofertas" client:load />
+      </div>
+    </div>
+  </div>
+</BaseLayout>

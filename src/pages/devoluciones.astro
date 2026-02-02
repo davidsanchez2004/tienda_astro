@@ -1,0 +1,179 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Devoluciones - BY ARENA" description="Solicita una devolución de tu pedido BY ARENA de forma fácil y rápida.">
+  <main class="min-h-screen bg-gray-50">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-b from-[#D4C5B9] to-gray-50 py-16">
+      <div class="max-w-4xl mx-auto px-4 text-center">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">
+          Devoluciones
+        </h1>
+        <p class="text-lg text-white/90 max-w-2xl mx-auto">
+          Queremos que estés 100% satisfecha con tu compra. Si necesitas hacer una devolución, estamos aquí para ayudarte.
+        </p>
+      </div>
+    </section>
+
+    <div class="max-w-4xl mx-auto px-4 py-12">
+      <!-- Return Policy -->
+      <div class="bg-white rounded-2xl shadow-sm p-8 mb-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
+          <span class="text-3xl">📋</span>
+          Política de Devoluciones
+        </h2>
+        
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <span class="text-xl">⏰</span>
+              Plazo de devolución
+            </h3>
+            <p class="text-gray-600 text-sm">
+              Dispones de <strong>30 días</strong> desde la recepción de tu pedido para solicitar una devolución.
+            </p>
+          </div>
+          
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <span class="text-xl">📦</span>
+              Estado del producto
+            </h3>
+            <p class="text-gray-600 text-sm">
+              El artículo debe estar <strong>sin usar</strong> y en su <strong>embalaje original</strong> con todas las etiquetas.
+            </p>
+          </div>
+          
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <span class="text-xl">💰</span>
+              Reembolso
+            </h3>
+            <p class="text-gray-600 text-sm">
+              Una vez recibido el producto, procesamos el reembolso en <strong>3-5 días laborables</strong>.
+            </p>
+          </div>
+          
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <span class="text-xl">🚚</span>
+              Gastos de envío
+            </h3>
+            <p class="text-gray-600 text-sm">
+              Los gastos de devolución corren a cargo del cliente, excepto en caso de <strong>producto defectuoso</strong>.
+            </p>
+          </div>
+        </div>
+        
+        <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <p class="text-amber-800 text-sm flex items-start gap-2">
+            <span class="text-xl">⚠️</span>
+            <span>
+              <strong>Importante:</strong> Por motivos de higiene, los <strong>pendientes</strong> no son elegibles para devolución, 
+              excepto en caso de defecto de fabricación.
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Return Form -->
+      <div class="bg-white rounded-2xl shadow-sm p-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-6 flex items-center gap-3">
+          <span class="text-3xl">📝</span>
+          Solicitar Devolución
+        </h2>
+        
+        <div class="text-gray-600 space-y-4">
+          <p>Para solicitar una devolución, puedes hacerlo de las siguientes formas:</p>
+          
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3">Opción 1: Desde tu cuenta</h3>
+            <p class="text-sm mb-4">Si tienes cuenta, accede a "Mis Pedidos" y selecciona el pedido que deseas devolver.</p>
+            <a href="/mis-pedidos" class="inline-block bg-[#D4C5B9] text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#c4b5a9] transition-colors">
+              Ir a Mis Pedidos
+            </a>
+          </div>
+          
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3">Opción 2: Rastrear tu pedido</h3>
+            <p class="text-sm mb-4">Introduce tu número de pedido o email para localizar tu compra y gestionar la devolución.</p>
+            <a href="/rastreo" class="inline-block bg-[#D4C5B9] text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#c4b5a9] transition-colors">
+              Rastrear Pedido
+            </a>
+          </div>
+          
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="font-semibold text-gray-900 mb-3">Opción 3: Contactar con nosotros</h3>
+            <p class="text-sm mb-4">Escríbenos con tu número de pedido y te ayudaremos a gestionar tu devolución.</p>
+            <a href="/contacto" class="inline-block border-2 border-[#D4C5B9] text-[#D4C5B9] px-5 py-2.5 rounded-full text-sm font-medium hover:bg-[#D4C5B9] hover:text-white transition-colors">
+              Contactar
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ Section -->
+      <div class="mt-12">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-6 text-center">
+          Preguntas Frecuentes
+        </h2>
+        
+        <div class="space-y-4">
+          <details class="bg-white rounded-xl shadow-sm p-6 group">
+            <summary class="font-medium text-gray-900 cursor-pointer list-none flex items-center justify-between">
+              ¿Cómo puedo hacer el seguimiento de mi devolución?
+              <span class="transform group-open:rotate-180 transition-transform">
+                ▼
+              </span>
+            </summary>
+            <p class="mt-4 text-gray-600 text-sm">
+              Una vez enviada tu solicitud, recibirás un email de confirmación con un número de seguimiento. 
+              También puedes consultar el estado en la sección "Mis Pedidos" de tu cuenta.
+            </p>
+          </details>
+          
+          <details class="bg-white rounded-xl shadow-sm p-6 group">
+            <summary class="font-medium text-gray-900 cursor-pointer list-none flex items-center justify-between">
+              ¿Puedo cambiar un producto por otro?
+              <span class="transform group-open:rotate-180 transition-transform">
+                ▼
+              </span>
+            </summary>
+            <p class="mt-4 text-gray-600 text-sm">
+              Actualmente no ofrecemos cambios directos. Debes solicitar una devolución y realizar un nuevo pedido 
+              con el producto que desees.
+            </p>
+          </details>
+          
+          <details class="bg-white rounded-xl shadow-sm p-6 group">
+            <summary class="font-medium text-gray-900 cursor-pointer list-none flex items-center justify-between">
+              ¿Dónde debo enviar el paquete?
+              <span class="transform group-open:rotate-180 transition-transform">
+                ▼
+              </span>
+            </summary>
+            <p class="mt-4 text-gray-600 text-sm">
+              Una vez aprobada tu solicitud de devolución, recibirás un email con la dirección de envío y las 
+              instrucciones para preparar el paquete.
+            </p>
+          </details>
+        </div>
+      </div>
+
+      <!-- Contact CTA -->
+      <div class="mt-12 bg-gradient-to-r from-[#D4C5B9] to-[#c4b5a9] rounded-2xl p-8 text-center text-white">
+        <h3 class="text-xl font-semibold mb-2">¿Tienes alguna duda?</h3>
+        <p class="text-white/90 mb-4">
+          Nuestro equipo de atención al cliente está aquí para ayudarte.
+        </p>
+        <a 
+          href="/contacto" 
+          class="inline-block bg-white text-[#D4C5B9] px-6 py-3 rounded-full font-medium hover:bg-gray-100 transition-colors"
+        >
+          Contactar
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

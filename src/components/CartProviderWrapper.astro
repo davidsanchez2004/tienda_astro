@@ -1,0 +1,13 @@
+---
+import { CartProvider } from './CartContext';
+
+interface Props {
+  children: any;
+}
+
+const { children } = Astro.props;
+---
+
+<CartProvider client:only="react">
+  {children}
+</CartProvider>

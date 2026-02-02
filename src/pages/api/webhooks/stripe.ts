@@ -1,0 +1,609 @@
+import type { APIRoute } from 'astro';
+import { supabaseAdminClient } from '../../../lib/supabase';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+// Tipos de eventos procesados
+type StripeEventType = 
+  | 'checkout.session.completed'
+  | 'payment_intent.succeeded'
+  | 'payment_intent.payment_failed'
+  | 'charge.refunded'
+  | 'charge.dispute.created';
+
+/**
+ * Webhook endpoint para eventos de Stripe
+ * 
+ * Eventos procesados:
+ * - checkout.session.completed: Sesión completada
+ * - payment_intent.succeeded: Pago exitoso
+ * - payment_intent.payment_failed: Pago fallido
+ * - charge.refunded: Reembolso procesado
+ * - charge.dispute.created: Disputa iniciada (chargeback)
+ */
+export const POST: APIRoute = async ({ request }) => {
+  const body = await request.text();
+  const signature = request.headers.get('stripe-signature') || '';
+
+  // Validar firma
+  if (!signature) {
+    console.error('Missing webhook signature');
+    return new Response(JSON.stringify({ error: 'Missing signature' }), {
+      status: 400,
+    });
+  }
+
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET not configured');
+    return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+      status: 500,
+    });
+  }
+
+  let event: Stripe.Event;
+
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Webhook signature verification failed:', message);
+
+    // Loguear error
+    await logWebhookEvent({
+      event_id: 'unknown',
+      event_type: 'verification_failed',
+      status: 'failed',
+      error_message: message,
+    });
+
+    return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+      status: 400,
+    });
+  }
+
+  try {
+    // Procesar evento según tipo
+    const eventType = event.type as StripeEventType;
+
+    switch (eventType) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as any);
+        break;
+
+      case 'payment_intent.succeeded':
+        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+        break;
+
+      case 'payment_intent.payment_failed':
+        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent);
+        break;
+
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge);
+        break;
+
+      case 'charge.dispute.created':
+        await handleDisputeCreated(event.data.object as Stripe.Dispute);
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${eventType}`);
+    }
+
+    // Loguear éxito
+    await logWebhookEvent({
+      event_id: event.id,
+      event_type: event.type,
+      status: 'processed',
+    });
+
+    return new Response(JSON.stringify({ received: true }), { status: 200 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Webhook processing error:', message);
+
+    // Loguear error
+    await logWebhookEvent({
+      event_id: event.id,
+      event_type: event.type,
+      status: 'failed',
+      error_message: message,
+    });
+
+    return new Response(JSON.stringify({ error: 'Processing failed' }), {
+      status: 500,
+    });
+  }
+};
+
+/**
+ * Maneja sesiones de checkout completadas (legacy)
+ */
+async function handleCheckoutSessionCompleted(session: any): Promise<void> {
+  console.log(`Checkout session completed: ${session.id}`);
+
+  const { userId, shippingOption, shippingAddress, couponCode } = session.metadata;
+
+  // Obtener items de la sesión
+  const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
+
+  // Crear orden
+  const { data: order, error: orderError } = await supabaseAdminClient
+    .from('orders')
+    .insert([
+      {
+        user_id: userId,
+        status: 'paid',
+        payment_status: 'paid',
+        subtotal: (session.amount_subtotal || 0) / 100,
+        shipping_cost: shippingOption === 'home' ? 2 : 0,
+        total: (session.amount_total || 0) / 100,
+        shipping_option: shippingOption,
+        shipping_address: JSON.parse(shippingAddress || '{}'),
+        stripe_payment_intent_id: session.payment_intent,
+        stripe_session_id: session.id,
+        updated_at: new Date().toISOString(),
+      },
+    ])
+    .select()
+    .single();
+
+  if (orderError) {
+    throw new Error(`Failed to create order: ${orderError.message}`);
+  }
+
+  if (order) {
+    // Agregar items a la orden
+    const orderItems = lineItems.data.map((item: any) => ({
+      order_id: order.id,
+      product_id: item.price.metadata?.product_id || '',
+      quantity: item.quantity,
+      price: (item.price.unit_amount || 0) / 100,
+      total: ((item.price.unit_amount || 0) * item.quantity) / 100,
+    }));
+
+    const { error: itemsError } = await supabaseAdminClient
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      console.error('Error adding order items:', itemsError);
+    }
+
+    // Decrementar stock
+    for (const item of lineItems.data) {
+      const productId = item.price?.metadata?.product_id;
+      const quantity = item.quantity || 1;
+      if (productId) {
+        const { data: product } = await supabaseAdminClient
+          .from('products')
+          .select('stock')
+          .eq('id', productId)
+          .single();
+
+        if (product) {
+          await supabaseAdminClient
+            .from('products')
+            .update({ stock: Math.max(0, product.stock - quantity) })
+            .eq('id', productId);
+        }
+      }
+    }
+
+    // Actualizar cupón si fue usado
+    if (couponCode) {
+      const { data: coupon } = await supabaseAdminClient
+        .from('coupons')
+        .select('current_uses')
+        .eq('code', couponCode)
+        .single();
+
+      if (coupon) {
+        await supabaseAdminClient
+          .from('coupons')
+          .update({ current_uses: (coupon.current_uses || 0) + 1 })
+          .eq('code', couponCode);
+      }
+    }
+
+    // Limpiar carrito
+    if (userId) {
+      const { data: cart } = await supabaseAdminClient
+        .from('carts')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (cart) {
+        await supabaseAdminClient
+          .from('cart_items')
+          .delete()
+          .eq('cart_id', cart.id);
+      }
+    }
+
+    console.log(`Order ${order.id} created successfully`);
+  }
+}
+
+/**
+ * Maneja pagos exitosos via payment_intent
+ */
+async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+  console.log(`Payment intent succeeded: ${paymentIntent.id}`);
+
+  const orderId = paymentIntent.metadata?.order_id;
+
+  if (!orderId) {
+    console.warn('No order_id in payment intent metadata');
+    return;
+  }
+
+  // Obtener orden
+  const { data: order, error: fetchError } = await supabaseAdminClient
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch order: ${fetchError.message}`);
+  }
+
+  // Actualizar estado a pagado
+  const { error: updateError } = await supabaseAdminClient
+    .from('orders')
+    .update({
+      payment_status: 'paid',
+      status: 'paid',
+      stripe_payment_intent_id: paymentIntent.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (updateError) {
+    throw new Error(`Failed to update order: ${updateError.message}`);
+  }
+
+  console.log(`Order ${orderId} marked as paid`);
+
+  // Enviar email (non-blocking)
+  try {
+    sendPaymentConfirmationEmail(order).catch(err => 
+      console.error('Failed to send confirmation email:', err)
+    );
+  } catch (err) {
+    console.error('Error sending email:', err);
+  }
+}
+
+/**
+ * Maneja pagos fallidos
+ */
+async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+  console.log(`Payment intent failed: ${paymentIntent.id}`);
+
+  const orderId = paymentIntent.metadata?.order_id;
+
+  if (!orderId) {
+    console.warn('No order_id in payment intent metadata');
+    return;
+  }
+
+  // Obtener orden
+  const { data: order, error: fetchError } = await supabaseAdminClient
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch order: ${fetchError.message}`);
+  }
+
+  // Actualizar estado a fallido
+  const { error: updateError } = await supabaseAdminClient
+    .from('orders')
+    .update({
+      payment_status: 'failed',
+      stripe_payment_intent_id: paymentIntent.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (updateError) {
+    throw new Error(`Failed to update order: ${updateError.message}`);
+  }
+
+  console.log(`Order ${orderId} marked as failed`);
+
+  // Enviar email (non-blocking)
+  try {
+    sendPaymentFailedEmail(order, paymentIntent).catch(err =>
+      console.error('Failed to send failed payment email:', err)
+    );
+  } catch (err) {
+    console.error('Error sending email:', err);
+  }
+}
+
+/**
+ * Maneja reembolsos
+ */
+async function handleChargeRefunded(charge: Stripe.Charge): Promise<void> {
+  console.log(`Charge refunded: ${charge.id}`);
+
+  const paymentIntentId = charge.payment_intent;
+
+  if (!paymentIntentId) {
+    console.warn('No payment_intent in charge');
+    return;
+  }
+
+  // Obtener orden por payment_intent
+  const { data: orders, error: fetchError } = await supabaseAdminClient
+    .from('orders')
+    .select('*')
+    .eq('stripe_payment_intent_id', paymentIntentId);
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch orders: ${fetchError.message}`);
+  }
+
+  if (orders && orders.length > 0) {
+    const order = orders[0];
+    const refundAmount = charge.amount_refunded ? charge.amount_refunded / 100 : order.total_amount;
+
+    // Actualizar estado de reembolso
+    const { error: updateError } = await supabaseAdminClient
+      .from('orders')
+      .update({
+        refund_status: 'refunded',
+        refund_amount: refundAmount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', order.id);
+
+    if (updateError) {
+      throw new Error(`Failed to update refund: ${updateError.message}`);
+    }
+
+    console.log(`Order ${order.id} marked as refunded`);
+
+    // Enviar email (non-blocking)
+    try {
+      sendRefundConfirmationEmail(order, refundAmount).catch(err =>
+        console.error('Failed to send refund email:', err)
+      );
+    } catch (err) {
+      console.error('Error sending email:', err);
+    }
+  }
+}
+
+/**
+ * Maneja disputas (chargebacks)
+ */
+async function handleDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
+  console.log(`Dispute created: ${dispute.id}`);
+
+  const chargeId = dispute.charge as string;
+
+  // Obtener orden por charge
+  const { data: orders, error: fetchError } = await supabaseAdminClient
+    .from('orders')
+    .select('*')
+    .eq('stripe_charge_id', chargeId);
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch orders: ${fetchError.message}`);
+  }
+
+  if (orders && orders.length > 0) {
+    const order = orders[0];
+
+    // Actualizar estado a disputado
+    const { error: updateError } = await supabaseAdminClient
+      .from('orders')
+      .update({
+        payment_status: 'disputed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', order.id);
+
+    if (updateError) {
+      throw new Error(`Failed to update dispute: ${updateError.message}`);
+    }
+
+    console.log(`Order ${order.id} marked as disputed`);
+
+    // Notificar admin (non-blocking)
+    try {
+      notifyAdminDispute(order, dispute).catch(err =>
+        console.error('Failed to notify admin:', err)
+      );
+    } catch (err) {
+      console.error('Error notifying admin:', err);
+    }
+  }
+}
+
+/**
+ * Registra eventos de webhook
+ */
+async function logWebhookEvent(data: {
+  event_id: string;
+  event_type: string;
+  status: 'processed' | 'failed';
+  error_message?: string;
+}): Promise<void> {
+  try {
+    await supabaseAdminClient
+      .from('webhook_logs')
+      .insert([
+        {
+          event_id: data.event_id,
+          event_type: data.event_type,
+          status: data.status,
+          error_message: data.error_message,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+  } catch (error) {
+    console.error('Failed to log webhook:', error);
+  }
+}
+
+/**
+ * Envía email de confirmación de pago al cliente y notificación al admin
+ */
+async function sendPaymentConfirmationEmail(order: any): Promise<void> {
+  try {
+    const appUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    const customerEmail = order.guest_email || order.customer_email;
+    const customerName = order.guest_first_name 
+      ? `${order.guest_first_name} ${order.guest_last_name || ''}`.trim()
+      : 'Cliente';
+    
+    // Obtener items del pedido
+    const { data: orderItems } = await supabaseAdminClient
+      .from('order_items')
+      .select('*, products(name)')
+      .eq('order_id', order.id);
+    
+    const items = (orderItems || []).map((item: any) => ({
+      name: item.products?.name || 'Producto',
+      quantity: item.quantity,
+      price: item.price,
+    }));
+    
+    const orderData = {
+      orderId: order.id,
+      orderNumber: order.id.slice(0, 8).toUpperCase(),
+      customerName,
+      customerEmail,
+      items,
+      subtotal: order.subtotal || order.total,
+      shippingCost: order.shipping_cost || 0,
+      discount: order.discount_amount || 0,
+      total: order.total,
+      shippingAddress: order.shipping_address || {},
+      shippingMethod: order.shipping_option as 'home' | 'pickup',
+    };
+    
+    // Enviar email al cliente
+    await fetch(`${appUrl}/api/email/send-branded`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'order_confirmation_customer',
+        to: customerEmail,
+        data: orderData,
+      }),
+    });
+    
+    // Enviar email al admin
+    await fetch(`${appUrl}/api/email/send-branded`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'order_notification_admin',
+        to: import.meta.env.ADMIN_EMAIL || 'admin@byarena.com',
+        data: orderData,
+      }),
+    });
+    
+    console.log('Confirmation emails sent for order:', order.id);
+  } catch (error) {
+    console.error('Failed to send payment confirmation email:', error);
+  }
+}
+
+/**
+ * Envía email de pago fallido
+ */
+async function sendPaymentFailedEmail(order: any, paymentIntent: Stripe.PaymentIntent): Promise<void> {
+  try {
+    const appUrl = process.env.PUBLIC_APP_URL || 'http://localhost:3000';
+    const errorMessage = paymentIntent.last_payment_error?.message || 'Unknown error';
+    
+    const response = await fetch(`${appUrl}/api/transactional/send-transactional`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'payment_failed',
+        to: order.customer_email || order.guest_email,
+        data: {
+          orderNumber: order.order_number,
+          errorMessage,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Email API error: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Failed to send payment failed email:', error);
+  }
+}
+
+/**
+ * Envía email de confirmación de reembolso
+ */
+async function sendRefundConfirmationEmail(order: any, refundAmount: number): Promise<void> {
+  try {
+    const appUrl = process.env.PUBLIC_APP_URL || 'http://localhost:3000';
+    const response = await fetch(`${appUrl}/api/transactional/send-transactional`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'refund_confirmed',
+        to: order.customer_email || order.guest_email,
+        data: {
+          orderNumber: order.order_number,
+          refundAmount,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Email API error: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Failed to send refund confirmation email:', error);
+  }
+}
+
+/**
+ * Notifica al admin sobre una disputa
+ */
+async function notifyAdminDispute(order: any, dispute: Stripe.Dispute): Promise<void> {
+  try {
+    const appUrl = process.env.PUBLIC_APP_URL || 'http://localhost:3000';
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+    
+    const response = await fetch(`${appUrl}/api/transactional/send-transactional`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'dispute_notification',
+        to: adminEmail,
+        data: {
+          orderNumber: order.order_number,
+          disputeId: dispute.id,
+          amount: dispute.amount / 100,
+          reason: dispute.reason,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Email API error: ${response.statusText}`);
+    }
+  } catch (error) {
+    console.error('Failed to notify admin about dispute:', error);
+  }
+}

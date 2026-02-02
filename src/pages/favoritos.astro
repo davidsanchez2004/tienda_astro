@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import WishlistDisplay from '../components/islands/WishlistDisplay';
+---
+
+<BaseLayout title="Mis Favoritos - BY ARENA" description="Tus productos favoritos guardados en BY ARENA.">
+  <main class="min-h-screen bg-gray-50">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-b from-[#D4C5B9] to-gray-50 py-12">
+      <div class="max-w-6xl mx-auto px-4 text-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+          <span class="text-4xl">❤️</span>
+          Mis Favoritos
+        </h1>
+        <p class="text-white/90">
+          Tus joyas favoritas guardadas para cuando quieras
+        </p>
+      </div>
+    </section>
+
+    <div class="max-w-6xl mx-auto px-4 py-12">
+      <WishlistDisplay client:load />
+    </div>
+  </main>
+</BaseLayout>

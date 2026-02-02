@@ -1,0 +1,119 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// URL del catálogo de Canva - Reemplazar con URL real
+const canvaUrl = 'https://www.canva.com/design/YOUR_DESIGN_ID/view?embed';
+---
+
+<BaseLayout title="Catálogo Digital | BY ARENA" description="Explora nuestro catálogo digital de bisutería y complementos premium">
+  <div class="bg-arena-pale py-12 border-b border-arena-light">
+    <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 text-center">
+      <h1 class="text-4xl font-serif font-bold text-gray-900 mb-4">
+        Catálogo Digital
+      </h1>
+      <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+        Descubre nuestra colección completa de bisutería y complementos en nuestro catálogo interactivo
+      </p>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-12">
+    <!-- Información del catálogo -->
+    <div class="bg-white rounded-lg border border-arena-light p-6 mb-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">
+            Colección Primavera/Verano 2026
+          </h2>
+          <p class="text-gray-600">
+            Las últimas tendencias en bisutería artesanal y complementos elegantes
+          </p>
+        </div>
+        <div class="flex gap-3">
+          <a 
+            href="/catalogo" 
+            class="px-6 py-3 bg-arena text-white font-semibold rounded-lg hover:bg-arena-light transition-colors"
+          >
+            Ver Tienda Online
+          </a>
+          <button 
+            id="fullscreen-btn"
+            class="px-6 py-3 border-2 border-arena text-arena font-semibold rounded-lg hover:bg-arena-pale transition-colors"
+          >
+            Pantalla Completa
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Iframe del catálogo -->
+    <div id="catalog-container" class="relative bg-white rounded-lg border border-arena-light overflow-hidden shadow-lg">
+      <div class="aspect-[3/4] md:aspect-[16/10] lg:aspect-[16/9]">
+        <iframe
+          id="catalog-iframe"
+          src={canvaUrl}
+          class="w-full h-full border-0"
+          allowfullscreen
+          loading="lazy"
+          title="Catálogo BY ARENA"
+        ></iframe>
+      </div>
+    </div>
+
+    <!-- Instrucciones -->
+    <div class="mt-8 grid md:grid-cols-3 gap-6">
+      <div class="bg-arena-pale rounded-lg p-6 text-center">
+        <div class="w-12 h-12 bg-arena rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">Navega Fácil</h3>
+        <p class="text-sm text-gray-600">
+          Usa las flechas o desliza para ver todas las páginas del catálogo
+        </p>
+      </div>
+
+      <div class="bg-arena-pale rounded-lg p-6 text-center">
+        <div class="w-12 h-12 bg-arena rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">Zoom para Detalles</h3>
+        <p class="text-sm text-gray-600">
+          Haz clic en cualquier producto para ver los detalles más de cerca
+        </p>
+      </div>
+
+      <div class="bg-arena-pale rounded-lg p-6 text-center">
+        <div class="w-12 h-12 bg-arena rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+        <h3 class="font-semibold text-gray-900 mb-2">Compra Online</h3>
+        <p class="text-sm text-gray-600">
+          ¿Te gusta algo? Visita nuestra tienda online para comprarlo
+        </p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  // Fullscreen functionality
+  const btn = document.getElementById('fullscreen-btn');
+  const container = document.getElementById('catalog-container');
+  
+  btn?.addEventListener('click', () => {
+    if (container) {
+      if (container.requestFullscreen) {
+        container.requestFullscreen();
+      } else if ((container as any).webkitRequestFullscreen) {
+        (container as any).webkitRequestFullscreen();
+      }
+    }
+  });
+</script>

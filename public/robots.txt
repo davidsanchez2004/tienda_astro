@@ -1,0 +1,22 @@
+# robots.txt - BY ARENA Ecommerce
+# https://byarena.com
+
+User-agent: *
+Allow: /
+
+# Bloquear rutas privadas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /cuenta/
+Disallow: /checkout/
+Disallow: /auth/
+
+# Permitir robots de motores de búsqueda
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# Sitemap
+Sitemap: https://byarena.com/sitemap.xml

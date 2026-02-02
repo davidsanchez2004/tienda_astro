@@ -1,0 +1,105 @@
+---
+/**
+ * Schema.org Product - Structured Data para SEO
+ * Genera JSON-LD para productos individuales
+ */
+
+interface Props {
+  product: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    image_url: string;
+    images_urls?: string[];
+    stock: number;
+    sku?: string;
+    category?: {
+      name: string;
+    };
+  };
+  reviews?: {
+    average: number;
+    count: number;
+  };
+}
+
+const { product, reviews } = Astro.props;
+const siteUrl = 'https://byarena.com';
+
+const schema = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  description: product.description,
+  image: product.images_urls?.length ? product.images_urls : [product.image_url],
+  sku: product.sku || product.id,
+  mpn: product.id,
+  brand: {
+    '@type': 'Brand',
+    name: 'BY ARENA',
+  },
+  offers: {
+    '@type': 'Offer',
+    url: `${siteUrl}/producto/${product.id}`,
+    priceCurrency: 'EUR',
+    price: product.price.toFixed(2),
+    availability: product.stock > 0 
+      ? 'https://schema.org/InStock' 
+      : 'https://schema.org/OutOfStock',
+    seller: {
+      '@type': 'Organization',
+      name: 'BY ARENA',
+    },
+    shippingDetails: {
+      '@type': 'OfferShippingDetails',
+      shippingRate: {
+        '@type': 'MonetaryAmount',
+        value: '2.00',
+        currency: 'EUR',
+      },
+      shippingDestination: {
+        '@type': 'DefinedRegion',
+        addressCountry: 'ES',
+      },
+      deliveryTime: {
+        '@type': 'ShippingDeliveryTime',
+        handlingTime: {
+          '@type': 'QuantitativeValue',
+          minValue: 1,
+          maxValue: 2,
+          unitCode: 'DAY',
+        },
+        transitTime: {
+          '@type': 'QuantitativeValue',
+          minValue: 2,
+          maxValue: 5,
+          unitCode: 'DAY',
+        },
+      },
+    },
+    hasMerchantReturnPolicy: {
+      '@type': 'MerchantReturnPolicy',
+      applicableCountry: 'ES',
+      returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+      merchantReturnDays: 30,
+      returnMethod: 'https://schema.org/ReturnByMail',
+      returnFees: 'https://schema.org/FreeReturn',
+    },
+  },
+  ...(product.category && {
+    category: product.category.name,
+  }),
+  ...(reviews && reviews.count > 0 && {
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: reviews.average.toFixed(1),
+      reviewCount: reviews.count,
+      bestRating: '5',
+      worstRating: '1',
+    },
+  }),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(schema)} />

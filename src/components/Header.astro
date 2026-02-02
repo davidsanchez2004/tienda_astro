@@ -1,0 +1,109 @@
+---
+import UserMenu from './islands/UserMenu.tsx';
+---
+
+<header class="sticky top-0 z-50 bg-white border-b border-arena-light shadow-sm">
+  <nav class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12 py-4 flex items-center justify-between">
+    {/* Logo */}
+    <a href="/" class="flex items-center gap-2">
+      <div class="text-2xl font-serif font-bold text-arena">
+        BY ARENA
+      </div>
+    </a>
+
+    {/* Menu principal */}
+    <div class="hidden md:flex items-center gap-8">
+      <a href="/catalogo" class="text-gray-700 hover:text-arena font-medium transition-colors">
+        Catálogo
+      </a>
+      <a href="/ofertas" class="text-gray-700 hover:text-arena font-medium transition-colors">
+        Ofertas
+      </a>
+      <a href="/sobre-nosotros" class="text-gray-700 hover:text-arena font-medium transition-colors">
+        Nosotros
+      </a>
+      <a href="/contacto" class="text-gray-700 hover:text-arena font-medium transition-colors">
+        Contacto
+      </a>
+    </div>
+
+    {/* Actions */}
+    <div class="flex items-center gap-4">
+      <a
+        href="/buscar"
+        class="p-2 hover:bg-arena-pale rounded transition-colors"
+        title="Buscar"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </a>
+
+      <a
+        href="/carrito"
+        class="p-2 hover:bg-arena-pale rounded transition-colors"
+        title="Carrito"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
+        </svg>
+      </a>
+
+      <div id="user-menu-container" style="display: none;">
+        <UserMenu client:load />
+      </div>
+      <div id="auth-buttons" class="flex items-center gap-2">
+        <a href="/login" class="px-4 py-2 text-arena font-medium hover:text-arena-light transition-colors">
+          Inicia sesión
+        </a>
+        <a href="/registro" class="px-4 py-2 bg-arena text-white rounded-lg hover:bg-arena-light transition-colors font-medium">
+          Regístrate
+        </a>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<script>
+  import { supabaseClient } from '../lib/supabase';
+  
+  // Función para actualizar la visibilidad de los elementos de autenticación
+  async function updateAuthUI() {
+    const userMenuContainer = document.getElementById('user-menu-container');
+    const authButtons = document.getElementById('auth-buttons');
+    
+    try {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      
+      console.log('Auth session:', session);
+      
+      if (session?.user) {
+        if (userMenuContainer) userMenuContainer.style.display = 'block';
+        if (authButtons) authButtons.style.display = 'none';
+      } else {
+        if (userMenuContainer) userMenuContainer.style.display = 'none';
+        if (authButtons) authButtons.style.display = 'flex';
+      }
+    } catch (error) {
+      console.error('Error checking auth:', error);
+    }
+  }
+  
+  // Ejecutar al cargar la página
+  document.addEventListener('DOMContentLoaded', updateAuthUI);
+  
+  // También ejecutar inmediatamente
+  updateAuthUI();
+  
+  // Escuchar cambios de autenticación
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    console.log('Auth state changed:', event, session);
+    updateAuthUI();
+  });
+</script>
+
+<style>
+  @media (max-width: 768px) {
+    /* Mobile menu toggle would go here */
+  }
+</style>

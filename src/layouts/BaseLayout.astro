@@ -1,0 +1,93 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import WhatsAppButton from '../components/WhatsAppButton.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+const {
+  title = 'BY ARENA - Bisutería y Complementos',
+  description = 'Descubre nuestra colección premium de bisutería y complementos elegantes.',
+  image = '/logo.png'
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#D4C5B9" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_ES" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "BY ARENA",
+        "url": "https://byarena.com",
+        "logo": "/logo.png",
+        "sameAs": [
+          "https://instagram.com/byarena",
+          "https://tiktok.com/@byarena"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "Customer Service",
+          "email": "contact@byarena.com"
+        }
+      }
+    </script>
+
+    <title>{title}</title>
+
+    <!-- Fonts -->
+    <link
+      rel="preload"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap"
+      as="style"
+    />
+  </head>
+  <body class="bg-cream text-gray-900">
+    <div class="flex flex-col min-h-screen">
+      <Header />
+
+      <main class="flex-1">
+        <slot />
+      </main>
+
+      <Footer />
+
+      <!-- WhatsApp Button -->
+      <WhatsAppButton />
+    </div>
+
+    <script>
+      // Smooth scroll behavior
+      document.documentElement.style.scrollBehavior = 'smooth';
+
+      // Analytics (placeholder)
+      console.log('BY ARENA - Premium Jewelry Platform');
+    </script>
+  </body>
+</html>

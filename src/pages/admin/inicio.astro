@@ -1,0 +1,152 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Panel de Administración">
+  <div class="min-h-screen bg-gradient-to-br from-arena-pale to-white py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+      {/* Header */}
+      <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <h1 class="text-4xl font-bold text-arena mb-4">Panel de Administración</h1>
+        <p class="text-gray-600 text-lg mb-6">
+          Gestión completa de órdenes, rastreo de envíos y comunicación con clientes.
+        </p>
+      </div>
+
+      {/* Info Cards */}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Features Card */}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold text-arena mb-4">Características</h2>
+          <ul class="space-y-2 text-gray-700">
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Vista en tiempo real de todas las órdenes</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Búsqueda y filtrado avanzado</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Actualización de rastreo</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Emails automáticos a clientes</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Diseño responsive</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Security Card */}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h2 class="text-xl font-bold text-arena mb-4">Seguridad</h2>
+          <ul class="space-y-2 text-gray-700">
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Autenticación por clave de administrador</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Sesión segura en navegador</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Verificación de autorización</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Cierre de sesión automático</span>
+            </li>
+            <li class="flex items-center gap-2">
+              <span class="text-arena">✓</span>
+              <span>Encriptación de datos sensibles</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Quick Links */}
+      <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <h2 class="text-2xl font-bold text-arena mb-6">Acceso Rápido</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <a 
+            href="/admin/login"
+            class="flex items-center justify-between p-4 bg-gradient-to-r from-arena to-arena-light text-white rounded-lg hover:shadow-lg transition-shadow"
+          >
+            <div>
+              <h3 class="font-bold text-lg">Ingresar al Panel</h3>
+              <p class="text-sm opacity-90">Acceso seguro para administradores</p>
+            </div>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </a>
+
+          <a 
+            href="/admin/dashboard"
+            class="flex items-center justify-between p-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:shadow-lg transition-shadow"
+          >
+            <div>
+              <h3 class="font-bold text-lg">Dashboard</h3>
+              <p class="text-sm opacity-90">Gestión de órdenes y rastreo</p>
+            </div>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </a>
+
+          <a 
+            href="/admin/productos"
+            class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg transition-shadow"
+          >
+            <div>
+              <h3 class="font-bold text-lg">Productos</h3>
+              <p class="text-sm opacity-90">Crear y gestionar catálogo con Cloudinary</p>
+            </div>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      {/* Documentation */}
+      <div class="bg-white rounded-lg shadow-lg p-8">
+        <h2 class="text-2xl font-bold text-arena mb-6">📚 Documentación</h2>
+        
+        <div class="space-y-4">
+          <div class="border-l-4 border-arena pl-4">
+            <h3 class="font-bold text-lg text-gray-900">ADMIN_QUICK_START.md</h3>
+            <p class="text-gray-600">Guía rápida para acceder y usar el panel</p>
+          </div>
+          
+          <div class="border-l-4 border-arena pl-4">
+            <h3 class="font-bold text-lg text-gray-900">ADMIN_DASHBOARD_GUIDE.md</h3>
+            <p class="text-gray-600">Documentación técnica completa</p>
+          </div>
+          
+          <div class="border-l-4 border-arena pl-4">
+            <h3 class="font-bold text-lg text-gray-900">GUEST_TRACKING_GUIDE.md</h3>
+            <p class="text-gray-600">Sistema de rastreo para clientes invitados</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Info */}
+      <div class="bg-arena-pale rounded-lg p-6 mt-8 text-center">
+        <p class="text-gray-700 mb-2">
+          <strong>¿Primera vez?</strong> Dirígete a <code class="bg-white px-2 py-1 rounded">/admin/login</code>
+        </p>
+        <p class="text-sm text-gray-600">
+          Necesitarás tu clave de administrador configurada en las variables de entorno
+        </p>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
