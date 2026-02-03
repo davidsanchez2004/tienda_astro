@@ -10,6 +10,12 @@ interface Product {
   description: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export default function SearchProducts() {
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,14 +33,80 @@ export default function SearchProducts() {
     setSearched(true);
 
     try {
-      const { data } = await supabaseClient
+      const searchTerm = searchQuery.toLowerCase().trim();
+      
+      // Primero buscar categorias que coincidan con el termino de busqueda
+      const { data: categories } = await supabaseClient
+        .from('categories')
+        .select('id, name, slug')
+        .ilike('name', `%${searchTerm}%`);
+      
+      const categoryIds = categories?.map((c: Category) => c.id) || [];
+      
+      // Buscar productos por nombre, descripcion o categoria
+      let productsQuery = supabaseClient
         .from('products')
-        .select('id, name, price, image_url, slug, description')
-        .eq('active', true)
-        .ilike('name', `%${searchQuery}%`)
-        .limit(20);
-
-      setProducts(data || []);
+        .select('id, name, price, image_url, slug, description, category_ids')
+        .eq('active', true);
+      
+      // Si hay categorias que coinciden, buscar productos en esas categorias O por nombre/descripcion
+      if (categoryIds.length > 0) {
+        // Buscar productos que: 
+        // 1. Tengan nombre que contenga el termino
+        // 2. O tengan descripcion que contenga el termino
+        // 3. O pertenezcan a una categoria que coincida
+        const { data: byName } = await supabaseClient
+          .from('products')
+          .select('id, name, price, image_url, slug, description, category_ids')
+          .eq('active', true)
+          .ilike('name', `%${searchTerm}%`)
+          .limit(20);
+        
+        const { data: byDescription } = await supabaseClient
+          .from('products')
+          .select('id, name, price, image_url, slug, description, category_ids')
+          .eq('active', true)
+          .ilike('description', `%${searchTerm}%`)
+          .limit(20);
+        
+        const { data: byCategory } = await supabaseClient
+          .from('products')
+          .select('id, name, price, image_url, slug, description, category_ids')
+          .eq('active', true)
+          .overlaps('category_ids', categoryIds)
+          .limit(20);
+        
+        // Combinar y eliminar duplicados
+        const allProducts = [...(byName || []), ...(byDescription || []), ...(byCategory || [])];
+        const uniqueProducts = allProducts.filter((product, index, self) =>
+          index === self.findIndex((p) => p.id === product.id)
+        );
+        
+        setProducts(uniqueProducts.slice(0, 20));
+      } else {
+        // Solo buscar por nombre y descripcion
+        const { data: byName } = await supabaseClient
+          .from('products')
+          .select('id, name, price, image_url, slug, description')
+          .eq('active', true)
+          .ilike('name', `%${searchTerm}%`)
+          .limit(20);
+        
+        const { data: byDescription } = await supabaseClient
+          .from('products')
+          .select('id, name, price, image_url, slug, description')
+          .eq('active', true)
+          .ilike('description', `%${searchTerm}%`)
+          .limit(20);
+        
+        // Combinar y eliminar duplicados
+        const allProducts = [...(byName || []), ...(byDescription || [])];
+        const uniqueProducts = allProducts.filter((product, index, self) =>
+          index === self.findIndex((p) => p.id === product.id)
+        );
+        
+        setProducts(uniqueProducts.slice(0, 20));
+      }
     } catch (error) {
       console.error('Error searching products:', error);
       setProducts([]);
