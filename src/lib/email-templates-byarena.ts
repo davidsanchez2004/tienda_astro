@@ -1330,6 +1330,121 @@ export function generateContactNotificationAdmin(data: {
   };
 }
 
+// =====================================================
+// PLANTILLAS DE ACTUALIZACIÓN DE DEVOLUCIÓN
+// =====================================================
+
+export interface ReturnStatusUpdateData {
+  customerName: string;
+  returnNumber: string;
+  status: string;
+  statusMessage: string;
+  refundAmount: number;
+}
+
+const STATUS_CONFIG: Record<string, { color: string; icon: string; title: string }> = {
+  approved: { 
+    color: '#4CAF50', 
+    icon: '✓', 
+    title: 'Devolución Aprobada' 
+  },
+  rejected: { 
+    color: '#E53935', 
+    icon: '✕', 
+    title: 'Devolución No Aprobada' 
+  },
+  received: { 
+    color: '#2196F3', 
+    icon: '📦', 
+    title: 'Paquete Recibido' 
+  },
+  completed: { 
+    color: '#4CAF50', 
+    icon: '💰', 
+    title: '¡Reembolso Procesado!' 
+  },
+};
+
+/**
+ * Email de actualización de estado de devolución - Cliente
+ */
+export function generateReturnStatusUpdateEmail(data: ReturnStatusUpdateData): string {
+  const config = STATUS_CONFIG[data.status] || { 
+    color: BRAND_COLORS.secondary, 
+    icon: '📋', 
+    title: 'Actualización de Devolución' 
+  };
+
+  const content = `
+    ${getHeader()}
+    
+    <div class="content">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="display: inline-block; width: 70px; height: 70px; border-radius: 50%; background: ${config.color}15; line-height: 70px; font-size: 32px;">
+          ${config.icon}
+        </div>
+        <h2 class="greeting" style="margin-top: 15px; color: ${config.color};">${config.title}</h2>
+      </div>
+      
+      <p>Hola ${data.customerName},</p>
+      <p>${data.statusMessage}</p>
+      
+      <div class="highlight-box" style="border-left-color: ${config.color};">
+        <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">Número de devolución</p>
+        <p class="order-number">#${data.returnNumber}</p>
+      </div>
+      
+      ${data.status === 'approved' ? `
+        <div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #2E7D32; margin: 0 0 10px 0;">📋 Próximos pasos:</h3>
+          <ol style="margin: 0; padding-left: 20px; color: #2E7D32;">
+            <li>Empaca el producto en su embalaje original</li>
+            <li>Imprime o muestra en tu móvil la etiqueta de devolución</li>
+            <li>Entrega el paquete en el punto de recogida más cercano</li>
+          </ol>
+        </div>
+      ` : ''}
+      
+      ${data.status === 'completed' ? `
+        <div style="background: #E8F5E9; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; color: #2E7D32;">
+            <strong>Importe reembolsado:</strong><br>
+            <span style="font-size: 28px; font-weight: bold;">€${data.refundAmount.toFixed(2)}</span>
+          </p>
+          <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
+            El reembolso puede tardar 3-5 días hábiles en reflejarse en tu cuenta.
+          </p>
+        </div>
+      ` : ''}
+      
+      ${data.status === 'rejected' ? `
+        <div style="background: #FFEBEE; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; color: #C62828;">
+            Si tienes dudas sobre esta decisión, no dudes en contactarnos. 
+            Estaremos encantados de ayudarte.
+          </p>
+        </div>
+      ` : ''}
+      
+      <div style="text-align: center; margin-top: 30px;">
+        <a href="${SITE_URL}/mis-pedidos" class="cta-button">
+          Ver mis pedidos
+        </a>
+      </div>
+      
+      <div style="text-align: center; margin-top: 20px;">
+        <div class="whatsapp-box">
+          ¿Dudas? <a href="https://wa.me/${WHATSAPP_NUMBER}">Escríbenos por WhatsApp</a>
+        </div>
+      </div>
+    </div>
+    
+    ${getFooter()}
+  `;
+
+  return getBaseTemplate(content, `Devolución #${data.returnNumber} - ${config.title}`);
+}
+
 // Exportar todas las funciones
 export {
   BRAND_COLORS,

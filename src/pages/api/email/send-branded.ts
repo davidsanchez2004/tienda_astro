@@ -9,6 +9,7 @@ import {
   generateDeliveryNotificationAdmin,
   generateReturnRequestAdmin,
   generateReturnConfirmationCustomer,
+  generateReturnStatusUpdateEmail,
   generateDiscountCodeEmail,
   generateNewsletterWelcome,
   generateWelcomeEmail,
@@ -17,6 +18,7 @@ import {
   type OrderEmailData,
   type ReturnEmailData,
   type DiscountCodeEmailData,
+  type ReturnStatusUpdateData,
 } from '../../../lib/email-templates-byarena';
 
 // Función para obtener el email del admin desde la base de datos
@@ -48,6 +50,7 @@ type EmailTemplate =
   | 'delivery_notification_admin'
   | 'return_request_admin'
   | 'return_confirmation_customer'
+  | 'return_status_update'
   | 'discount_code'
   | 'newsletter_welcome'
   | 'newsletter_confirmed'
@@ -142,6 +145,19 @@ export const POST: APIRoute = async ({ request }) => {
         const returnData = data as ReturnEmailData;
         html = generateReturnConfirmationCustomer(returnData);
         subject = `🔄 Devolución #${returnData.returnNumber} recibida - BY ARENA`;
+        break;
+      }
+
+      case 'return_status_update': {
+        const statusData = data as ReturnStatusUpdateData;
+        html = generateReturnStatusUpdateEmail(statusData);
+        const statusTitles: Record<string, string> = {
+          approved: '✅ Devolución aprobada',
+          rejected: '❌ Devolución no aprobada',
+          received: '📦 Paquete recibido',
+          completed: '💰 ¡Reembolso procesado!',
+        };
+        subject = `${statusTitles[statusData.status] || '📋 Actualización'} - #${statusData.returnNumber} - BY ARENA`;
         break;
       }
 

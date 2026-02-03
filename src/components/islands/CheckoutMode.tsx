@@ -34,9 +34,21 @@ export default function CheckoutMode() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountLoading, setDiscountLoading] = useState(false);
+  const [discountError, setDiscountError] = useState('');
+  const [discountApplied, setDiscountApplied] = useState<{
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    amount: number;
+  } | null>(null);
 
   const shippingCost = shippingMethod === 'delivery' ? 2 : 0;
-  const finalTotal = total + shippingCost;
+  const discountAmount = discountApplied?.amount || 0;
+  const finalTotal = total + shippingCost - discountAmount;
 
   useEffect(() => {
     setIsClient(true);
@@ -103,6 +115,52 @@ export default function CheckoutMode() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
+    
+    setDiscountLoading(true);
+    setDiscountError('');
+    
+    try {
+      const response = await fetch('/api/checkout/validate-discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: discountCode.trim().toUpperCase(),
+          email: formData.email,
+          userId: userId,
+          cartTotal: total
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.valid) {
+        setDiscountApplied({
+          code: data.code,
+          type: data.discountType,
+          value: data.discountValue,
+          amount: data.discountAmount
+        });
+        setDiscountError('');
+      } else {
+        setDiscountError(data.error || 'Código no válido');
+        setDiscountApplied(null);
+      }
+    } catch (err) {
+      setDiscountError('Error al validar código');
+      setDiscountApplied(null);
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
+
+  const removeDiscount = () => {
+    setDiscountApplied(null);
+    setDiscountCode('');
+    setDiscountError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -126,7 +184,9 @@ export default function CheckoutMode() {
         shipping_cost: shippingCost,
         subtotal: total,
         total: finalTotal,
-        user_id: userId // Incluir el userId si está logueado
+        user_id: userId, // Incluir el userId si está logueado
+        discountCode: discountApplied?.code || null,
+        discountAmount: discountApplied?.amount || 0
       };
 
       console.log('Checkout - Sending order data with user_id:', userId);
@@ -346,6 +406,63 @@ export default function CheckoutMode() {
                 />
               </div>
 
+              {/* Discount Code */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-semibold mb-4">¿Tienes un código de descuento?</h2>
+                
+                {discountApplied ? (
+                  <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-green-800">{discountApplied.code}</p>
+                        <p className="text-sm text-green-600">
+                          {discountApplied.type === 'percentage' 
+                            ? `${discountApplied.value}% de descuento`
+                            : `€${discountApplied.value.toFixed(2)} de descuento`
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeDiscount}
+                      className="text-red-500 hover:text-red-700 p-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                      placeholder="Introduce tu código"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyDiscount}
+                      disabled={discountLoading || !discountCode.trim()}
+                      className="px-6 py-2 bg-arena text-white rounded-lg hover:bg-arena-light transition-colors disabled:opacity-50 font-medium"
+                    >
+                      {discountLoading ? '...' : 'Aplicar'}
+                    </button>
+                  </div>
+                )}
+                
+                {discountError && (
+                  <p className="mt-2 text-sm text-red-600">{discountError}</p>
+                )}
+              </div>
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                   {error}
@@ -399,6 +516,12 @@ export default function CheckoutMode() {
                     {shippingMethod === 'pickup' ? 'Gratis' : `€${shippingCost.toFixed(2)}`}
                   </span>
                 </div>
+                {discountApplied && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-green-600">Descuento ({discountApplied.code})</span>
+                    <span className="text-green-600">-€{discountApplied.amount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-2 flex justify-between font-semibold text-lg">
                   <span>Total</span>
                   <span className="text-arena">€{finalTotal.toFixed(2)}</span>
