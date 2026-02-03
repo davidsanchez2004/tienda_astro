@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
-import { sendEmail } from '../../../lib/gmail';
 import { generateOrderConfirmationHTML, generateOrderConfirmationPlainText } from '../../../lib/email-templates';
+import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
 
 interface SendEmailRequest {
   orderId: string;
@@ -52,14 +52,13 @@ export const POST: APIRoute = async ({ request }) => {
       checkoutType,
     });
 
-    // Usar Gmail via Nodemailer
-    const result = await sendEmail({
-      to: email,
-      subject: `Confirmación de tu Orden #${orderId} - BY ARENA`,
-      html: htmlContent,
-      text: plainTextContent,
-      replyTo: 'hola@byarena.com',
-    });
+    // Usar Gmail para enviar
+    const result = await sendEmailWithGmail(
+      email,
+      `Confirmación de tu Orden #${orderId} - BY ARENA`,
+      htmlContent,
+      plainTextContent
+    );
 
     if (!result.success) {
       console.error('Gmail error:', result.error);

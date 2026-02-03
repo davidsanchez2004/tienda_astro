@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
-import { sendEmail as sendGmailEmail } from '../../../lib/gmail';
+import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
 import {
   generateOrderConfirmationCustomer,
   generateOrderNotificationAdmin,
@@ -73,30 +73,6 @@ interface SendEmailRequest {
 // Constante para el email del admin
 const ADMIN_NOTIFICATION_EMAIL = import.meta.env.ADMIN_EMAIL || 'admin@byarena.com';
 
-// Función wrapper para usar Gmail
-async function sendEmail(to: string, subject: string, html: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  try {
-    const result = await sendGmailEmail({
-      to,
-      subject,
-      html,
-      replyTo: 'hola@byarena.com',
-    });
-    
-    return {
-      success: result.success,
-      messageId: result.messageId,
-      error: result.error,
-    };
-  } catch (error) {
-    console.error('Error sending email via Gmail:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Error de conexión' 
-    };
-  }
-}
-
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body: SendEmailRequest = await request.json();
@@ -120,14 +96,14 @@ export const POST: APIRoute = async ({ request }) => {
       case 'order_confirmation_customer': {
         const orderData = data as OrderEmailData;
         html = generateOrderConfirmationCustomer(orderData);
-        subject = `Pedido #${orderData.orderNumber} confirmado - BY ARENA`;
+        subject = `✨ Pedido #${orderData.orderNumber} confirmado - BY ARENA`;
         break;
       }
 
       case 'order_notification_admin': {
         const orderData = data as OrderEmailData;
         html = generateOrderNotificationAdmin(orderData);
-        subject = `[Nuevo Pedido] #${orderData.orderNumber} - ${orderData.total.toFixed(2)} EUR`;
+        subject = `🛒 Nuevo pedido #${orderData.orderNumber} - €${orderData.total.toFixed(2)}`;
         recipients = [adminEmail];
         break;
       }
@@ -135,21 +111,21 @@ export const POST: APIRoute = async ({ request }) => {
       case 'shipping_notification_customer': {
         const orderData = data as OrderEmailData;
         html = generateShippingNotificationCustomer(orderData);
-        subject = `Tu pedido #${orderData.orderNumber} esta en camino - BY ARENA`;
+        subject = `🚚 Tu pedido #${orderData.orderNumber} está en camino - BY ARENA`;
         break;
       }
 
       case 'delivery_confirmation_customer': {
         const orderData = data as OrderEmailData;
         html = generateDeliveryConfirmationCustomer(orderData);
-        subject = `Tu pedido #${orderData.orderNumber} ha llegado - BY ARENA`;
+        subject = `🎉 ¡Tu pedido #${orderData.orderNumber} ha llegado! - BY ARENA`;
         break;
       }
 
       case 'delivery_notification_admin': {
         const orderData = data as OrderEmailData;
         html = generateDeliveryNotificationAdmin(orderData);
-        subject = `[Entregado] Pedido #${orderData.orderNumber}`;
+        subject = `✅ Pedido #${orderData.orderNumber} entregado`;
         recipients = [adminEmail];
         break;
       }
@@ -157,7 +133,7 @@ export const POST: APIRoute = async ({ request }) => {
       case 'return_request_admin': {
         const returnData = data as ReturnEmailData;
         html = generateReturnRequestAdmin(returnData);
-        subject = `[Devolucion] #${returnData.returnNumber} - ${returnData.refundAmount.toFixed(2)} EUR`;
+        subject = `🔄 Nueva devolución #${returnData.returnNumber} - €${returnData.refundAmount.toFixed(2)}`;
         recipients = [adminEmail];
         break;
       }
@@ -165,7 +141,7 @@ export const POST: APIRoute = async ({ request }) => {
       case 'return_confirmation_customer': {
         const returnData = data as ReturnEmailData;
         html = generateReturnConfirmationCustomer(returnData);
-        subject = `Devolucion #${returnData.returnNumber} recibida - BY ARENA`;
+        subject = `🔄 Devolución #${returnData.returnNumber} recibida - BY ARENA`;
         break;
       }
 
@@ -175,7 +151,7 @@ export const POST: APIRoute = async ({ request }) => {
           ? `${discountData.discountValue}%` 
           : `€${discountData.discountValue.toFixed(2)}`;
         html = generateDiscountCodeEmail(discountData);
-        subject = `${discountDisplay} de descuento exclusivo para ti - BY ARENA`;
+        subject = `🎁 ¡${discountDisplay} de descuento exclusivo para ti! - BY ARENA`;
         break;
       }
 
@@ -230,7 +206,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Enviar email a cada destinatario
     const results = await Promise.all(
-      recipients.map(recipient => sendEmail(recipient, subject, html))
+      recipients.map(recipient => sendEmailWithGmail(recipient, subject, html))
     );
 
     const allSuccessful = results.every(r => r.success);

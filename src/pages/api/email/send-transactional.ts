@@ -1,5 +1,4 @@
 import type { APIRoute } from 'astro';
-import { sendEmail as sendGmailEmail } from '../../../lib/gmail';
 import { 
   generateWelcomeEmailHTML, 
   generateShippingNotificationHTML, 
@@ -15,6 +14,7 @@ import {
   generateDisputeNotificationHTML,
   generateDisputeNotificationPlainText,
 } from '../../../lib/additional-email-templates';
+import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
 
 interface SendEmailRequest {
   type?: 'welcome' | 'shipping' | 'refund' | 'return_request' | 'payment_confirmed' | 'payment_failed' | 'refund_confirmed' | 'dispute_notification';
@@ -30,23 +30,6 @@ interface SendEmailRequest {
   reason?: string;
   orderNumber?: string;
   returnNumber?: string;
-}
-
-// Función wrapper para usar Gmail via Nodemailer
-async function sendEmail(to: string, subject: string, html: string, text: string) {
-  const result = await sendGmailEmail({
-    to,
-    subject,
-    html,
-    text,
-    replyTo: 'hola@byarena.com',
-  });
-  
-  if (!result.success) {
-    throw new Error(result.error || 'Error al enviar email');
-  }
-  
-  return { id: result.messageId };
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -94,7 +77,7 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
       html = generateRefundNotificationHTML(body.orderId, body.refundAmount, body.reason, customerName || 'Cliente');
-      subject = `Tu Reembolso ha sido Procesado`;
+      subject = `Tu Reembolso ha sido Procesado ✓`;
       text = `Hola ${customerName}, tu reembolso de $${body.refundAmount.toFixed(2)} para la orden #${body.orderId} ha sido procesado.`;
     } else if (template === 'return_request' || type === 'return_request') {
       if (!toEmail || !data) {
@@ -117,7 +100,7 @@ export const POST: APIRoute = async ({ request }) => {
         data.reason,
         data.refundAmount
       );
-      subject = `Devolucion ${data.returnNumber} - Recibida`;
+      subject = `Devolución ${data.returnNumber} - Recibida ✓`;
     } else if (template === 'payment_confirmed' || type === 'payment_confirmed') {
       if (!toEmail || !data?.orderNumber || data.amount === undefined) {
         return new Response(
@@ -127,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generatePaymentConfirmedHTML(data.orderNumber, data.amount);
       text = generatePaymentConfirmedPlainText(data.orderNumber, data.amount);
-      subject = `Pago Confirmado - Orden ${data.orderNumber}`;
+      subject = `¡Pago Confirmado! Orden ${data.orderNumber} ✓`;
     } else if (template === 'payment_failed' || type === 'payment_failed') {
       if (!toEmail || !data?.orderNumber || !data?.errorMessage) {
         return new Response(
@@ -147,7 +130,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generateRefundConfirmedHTML(data.orderNumber, data.refundAmount);
       text = generateRefundConfirmedPlainText(data.orderNumber, data.refundAmount);
-      subject = `Reembolso Procesado - Orden ${data.orderNumber}`;
+      subject = `Reembolso Procesado - Orden ${data.orderNumber} ✓`;
     } else if (template === 'dispute_notification' || type === 'dispute_notification') {
       if (!toEmail || !data?.orderNumber || !data?.disputeId || data.amount === undefined) {
         return new Response(
@@ -157,7 +140,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generateDisputeNotificationHTML(data.orderNumber, data.disputeId, data.amount, data.reason || 'Unknown');
       text = generateDisputeNotificationPlainText(data.orderNumber, data.disputeId, data.amount, data.reason || 'Unknown');
-      subject = `[ALERTA] Disputa Reportada - Orden ${data.orderNumber}`;
+      subject = `⚠️ Disputa Reportada - Orden ${data.orderNumber}`;
     } else {
       return new Response(
         JSON.stringify({ error: 'Tipo de email no válido' }),
@@ -173,12 +156,19 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const result = await sendEmail(toEmail, subject, html, text);
+    const result = await sendEmailWithGmail(toEmail, subject, html, text);
+
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({ error: result.error || 'Error al enviar email' }),
+        { status: 500 }
+      );
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        messageId: result.id,
+        messageId: result.messageId,
         message: 'Email enviado correctamente',
       }),
       { status: 200 }
