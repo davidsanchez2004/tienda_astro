@@ -45,8 +45,9 @@ const getEnvVar = (key: string, fallback: string = ''): string => {
   return fallback;
 };
 
-const GMAIL_USER = getEnvVar('GMAIL_USER');
-const GMAIL_PASSWORD = getEnvVar('GMAIL_PASSWORD');
+// TEMPORALMENTE hardcodeado hasta resolver el problema de variables de entorno
+const GMAIL_USER = getEnvVar('GMAIL_USER') || 'davidsanchezacosta0@gmail.com';
+const GMAIL_PASSWORD = getEnvVar('GMAIL_PASSWORD') || 'bymf bhia bpli cmvt';
 const ADMIN_EMAIL = getEnvVar('ADMIN_EMAIL', 'admin@byarena.com');
 const SITE_NAME = 'BY ARENA';
 
