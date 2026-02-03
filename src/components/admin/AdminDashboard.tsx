@@ -34,9 +34,14 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     // Check admin authentication
+    console.log('[AdminDashboard] Verificando autenticación...');
     const key = sessionStorage.getItem('adminKey');
     const email = sessionStorage.getItem('adminEmail');
+    console.log('[AdminDashboard] Key encontrada:', key ? 'Sí' : 'No');
+    console.log('[AdminDashboard] Email:', email);
+    
     if (!key) {
+      console.log('[AdminDashboard] No hay key, redirigiendo a login...');
       window.location.href = '/admin/login';
       return;
     }
