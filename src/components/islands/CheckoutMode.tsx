@@ -140,7 +140,7 @@ export default function CheckoutMode() {
           code: data.code,
           type: data.discountType,
           value: data.discountValue,
-          amount: data.discountAmount
+          amount: data.calculatedDiscount
         });
         setDiscountError('');
       } else {
