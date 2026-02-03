@@ -15,7 +15,7 @@ COPY . .
 RUN npm run build
 
 # Exponer puerto
-EXPOSE 3000
+EXPOSE 4321
 
-# Start - Usar las variables de entorno correctas
-CMD ["node", "--experimental-detect-module-unhandled-rejections", "dist/server/entry.mjs"]
+# Start
+CMD ["node", "dist/server/entry.mjs"]
