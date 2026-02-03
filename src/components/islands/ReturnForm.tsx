@@ -104,17 +104,24 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Razón de la Devolución *
         </label>
-        <select
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent"
-          required
-        >
-          <option value="">Selecciona una razón...</option>
-          {RETURN_REASONS.map(r => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white text-gray-800 font-medium appearance-none cursor-pointer hover:border-arena/50 focus:border-arena focus:ring-4 focus:ring-arena/10 focus:outline-none transition-all duration-200"
+            required
+          >
+            <option value="" className="text-gray-400">Selecciona una razón...</option>
+            {RETURN_REASONS.map(r => (
+              <option key={r.value} value={r.value} className="py-2">{r.label}</option>
+            ))}
+          </select>
+          <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
+            <svg className="w-5 h-5 text-arena" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </div>
 
       {/* Description */}
