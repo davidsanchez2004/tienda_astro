@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 // Newsletter subscriber management component
 interface Subscriber {
   id: string;
@@ -27,9 +33,10 @@ export default function NewsletterManager() {
   const fetchSubscribers = async () => {
     setLoading(true);
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/newsletter', {
-        headers: { 'x-admin-key': adminKey || '' }
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey }
       });
       if (response.ok) {
         const data = await response.json();
@@ -68,10 +75,11 @@ export default function NewsletterManager() {
     if (!confirm('¿Seguro que quieres eliminar este suscriptor?')) return;
 
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch(`/api/admin/newsletter?id=${id}`, {
         method: 'DELETE',
-        headers: { 'x-admin-key': adminKey || '' }
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey }
       });
 
       if (response.ok) {

@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface DiscountCode {
   id: string;
   code: string;
@@ -18,11 +24,7 @@ interface DiscountCode {
   created_at: string;
 }
 
-interface DiscountManagerProps {
-  adminKey: string;
-}
-
-export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) {
+export default function DiscountCodeManager() {
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -51,7 +53,9 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
 
   const fetchCodes = async () => {
     try {
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/discount-codes', {
+        credentials: 'include',
         headers: { 'x-admin-key': adminKey },
       });
       const data = await response.json();
@@ -72,8 +76,10 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
     setSuccess('');
 
     try {
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/discount-codes', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-key': adminKey,
@@ -130,8 +136,10 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
     if (!confirm('¿Desactivar este código de descuento?')) return;
 
     try {
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/discount-codes', {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-key': adminKey,

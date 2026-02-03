@@ -71,6 +71,7 @@ export default function AdminDashboard() {
       setError('');
       const response = await fetch('/api/admin/get-orders', {
         method: 'GET',
+        credentials: 'include', // Importante para enviar cookies
         headers: {
           'x-admin-key': key,
           'Content-Type': 'application/json',
@@ -78,8 +79,8 @@ export default function AdminDashboard() {
       });
 
       if (response.status === 401) {
-        sessionStorage.removeItem('adminKey');
-        sessionStorage.removeItem('adminEmail');
+        deleteCookie('admin_token');
+        deleteCookie('admin_email');
         window.location.href = '/admin/login';
         return;
       }
@@ -316,7 +317,6 @@ export default function AdminDashboard() {
               {selectedOrder ? (
                 <AdminOrderDetail
                   order={selectedOrder}
-                  adminKey={adminKey}
                   onOrderUpdated={handleUpdateOrder}
                 />
               ) : (
@@ -327,9 +327,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         ) : activeTab === 'returns' ? (
-          <AdminReturnsManager adminKey={adminKey} />
+          <AdminReturnsManager />
         ) : activeTab === 'discounts' ? (
-          <DiscountCodeManager adminKey={adminKey} />
+          <DiscountCodeManager />
         ) : activeTab === 'categories' ? (
           <CategoryManager />
         ) : activeTab === 'blog' ? (
@@ -337,7 +337,7 @@ export default function AdminDashboard() {
         ) : activeTab === 'newsletter' ? (
           <NewsletterManager />
         ) : (
-          <ProductManager adminKey={adminKey} />
+          <ProductManager />
         )}
       </div>
     </div>

@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface Return {
   id: string;
   order_id: string;
@@ -9,10 +15,6 @@ interface Return {
   refund_amount: number;
   created_at: string;
   guest_email: string;
-}
-
-interface Props {
-  adminKey: string;
 }
 
 const returnStatusColors: Record<string, string> = {
@@ -35,7 +37,7 @@ const returnStatusLabels: Record<string, string> = {
   cancelled: 'Cancelada',
 };
 
-export default function AdminReturnsManager({ adminKey }: Props) {
+export default function AdminReturnsManager() {
   const [returns, setReturns] = useState<Return[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'completed'>('all');
@@ -48,7 +50,9 @@ export default function AdminReturnsManager({ adminKey }: Props) {
   const fetchReturns = async () => {
     try {
       setLoading(true);
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/get-returns', {
+        credentials: 'include',
         headers: {
           'x-admin-key': adminKey,
         },

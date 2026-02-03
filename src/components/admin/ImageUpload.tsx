@@ -1,12 +1,18 @@
 import React, { useState, useRef } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface ImageUploadProps {
   onImageUpload: (url: string, publicId: string) => void;
-  adminKey: string;
+  adminKey?: string;
   label?: string;
 }
 
-export default function ImageUpload({ onImageUpload, adminKey, label = 'Subir Imagen' }: ImageUploadProps) {
+export default function ImageUpload({ onImageUpload, adminKey: propAdminKey, label = 'Subir Imagen' }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
@@ -31,8 +37,10 @@ export default function ImageUpload({ onImageUpload, adminKey, label = 'Subir Im
       const formData = new FormData();
       formData.append('file', file);
 
+      const adminKey = propAdminKey || getCookie('admin_token') || '';
       const response = await fetch('/api/admin/upload-image', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'x-admin-key': adminKey,
         },

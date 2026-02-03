@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -28,9 +34,10 @@ export default function CategoryManager() {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/categories', {
-        headers: { 'x-admin-key': adminKey || '' }
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey }
       });
       if (response.ok) {
         const data = await response.json();
@@ -94,15 +101,16 @@ export default function CategoryManager() {
     setMessage(null);
 
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const method = editingCategory ? 'PUT' : 'POST';
       const url = editingCategory ? `/api/admin/categories?id=${editingCategory.id}` : '/api/admin/categories';
 
       const response = await fetch(url, {
         method,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': adminKey || ''
+          'x-admin-key': adminKey
         },
         body: JSON.stringify(formData)
       });
@@ -126,10 +134,11 @@ export default function CategoryManager() {
     if (!confirm('¿Seguro que quieres eliminar esta categoría? Los productos asociados quedarán sin categoría.')) return;
 
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch(`/api/admin/categories?id=${id}`, {
         method: 'DELETE',
-        headers: { 'x-admin-key': adminKey || '' }
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey }
       });
 
       if (response.ok) {

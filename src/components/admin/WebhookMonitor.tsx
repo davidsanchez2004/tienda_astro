@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface WebhookLog {
   id: string;
   event_id: string;
@@ -29,8 +35,6 @@ export default function WebhookMonitor() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
-  const adminKey = localStorage.getItem('adminKey');
-
   useEffect(() => {
     fetchWebhooks();
     fetchPaymentOrders();
@@ -49,9 +53,11 @@ export default function WebhookMonitor() {
       setLoading(true);
       setError(undefined);
       
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/get-webhooks', {
+        credentials: 'include',
         headers: {
-          'x-admin-key': adminKey || '',
+          'x-admin-key': adminKey,
         },
       });
 
@@ -71,9 +77,11 @@ export default function WebhookMonitor() {
       setLoading(true);
       setError(undefined);
       
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/get-payment-orders', {
+        credentials: 'include',
         headers: {
-          'x-admin-key': adminKey || '',
+          'x-admin-key': adminKey,
         },
       });
 

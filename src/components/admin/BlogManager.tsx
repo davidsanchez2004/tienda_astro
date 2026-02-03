@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface BlogPost {
   id: string;
   slug: string;
@@ -41,9 +47,10 @@ export default function BlogManager() {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch('/api/admin/blog', {
-        headers: { 'x-admin-key': adminKey || '' }
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey }
       });
       if (response.ok) {
         const data = await response.json();
@@ -117,15 +124,16 @@ export default function BlogManager() {
     setMessage(null);
 
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const method = editingPost ? 'PUT' : 'POST';
       const url = editingPost ? `/api/admin/blog?id=${editingPost.id}` : '/api/admin/blog';
 
       const response = await fetch(url, {
         method,
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': adminKey || ''
+          'x-admin-key': adminKey
         },
         body: JSON.stringify({
           ...formData,
@@ -152,10 +160,11 @@ export default function BlogManager() {
     if (!confirm('¿Seguro que quieres eliminar este artículo?')) return;
 
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch(`/api/admin/blog?id=${id}`, {
         method: 'DELETE',
-        headers: { 'x-admin-key': adminKey || '' }
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey }
       });
 
       if (response.ok) {
@@ -169,12 +178,13 @@ export default function BlogManager() {
 
   const togglePublish = async (post: BlogPost) => {
     try {
-      const adminKey = sessionStorage.getItem('adminSecretKey');
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch(`/api/admin/blog?id=${post.id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': adminKey || ''
+          'x-admin-key': adminKey
         },
         body: JSON.stringify({
           ...post,

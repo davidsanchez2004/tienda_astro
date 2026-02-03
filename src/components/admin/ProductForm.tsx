@@ -1,19 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import ImageUpload from './ImageUpload';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 interface Category {
   id: string;
   name: string;
 }
 
 interface ProductFormProps {
-  adminKey: string;
+  adminKey?: string;
   onProductSaved?: (product: any) => void;
   onCancel?: () => void;
   initialProduct?: any;
 }
 
-export default function ProductForm({ adminKey, onProductSaved, onCancel, initialProduct }: ProductFormProps) {
+export default function ProductForm({ adminKey: propAdminKey, onProductSaved, onCancel, initialProduct }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -98,8 +104,10 @@ export default function ProductForm({ adminKey, onProductSaved, onCancel, initia
         ? `/api/admin/update-product?id=${initialProduct.id}`
         : '/api/admin/create-product';
 
+      const adminKey = propAdminKey || getCookie('admin_token') || '';
       const response = await fetch(endpoint, {
         method: initialProduct?.id ? 'PUT' : 'POST',
+        credentials: 'include',
         headers: {
           'x-admin-key': adminKey,
           'Content-Type': 'application/json',

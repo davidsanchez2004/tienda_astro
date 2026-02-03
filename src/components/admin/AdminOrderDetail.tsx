@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+// Helper para eliminar cookies
+function deleteCookie(name: string) {
+  document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
+
 interface Order {
   id: string;
   orderNumber: string;
@@ -15,11 +26,10 @@ interface Order {
 
 interface Props {
   order: Order;
-  adminKey: string;
   onOrderUpdated: (order: Order) => void;
 }
 
-export default function AdminOrderDetail({ order, adminKey, onOrderUpdated }: Props) {
+export default function AdminOrderDetail({ order, onOrderUpdated }: Props) {
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
   const [carrier, setCarrier] = useState(order.carrier || 'Correos');
   const [loading, setLoading] = useState(false);
@@ -32,8 +42,10 @@ export default function AdminOrderDetail({ order, adminKey, onOrderUpdated }: Pr
     setLoading(true);
 
     try {
+      const adminKey = getCookie('admin_token') || '';
       const response = await fetch(`/api/admin/orders/${order.id}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: {
           'x-admin-key': adminKey,
           'Content-Type': 'application/json',
@@ -48,7 +60,8 @@ export default function AdminOrderDetail({ order, adminKey, onOrderUpdated }: Pr
 
       if (response.status === 401) {
         setError('Sesión expirada. Por favor, vuelve a iniciar sesión.');
-        sessionStorage.removeItem('adminKey');
+        deleteCookie('admin_token');
+        deleteCookie('admin_email');
         setTimeout(() => {
           window.location.href = '/admin/login';
         }, 2000);

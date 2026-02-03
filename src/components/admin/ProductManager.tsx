@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import ProductForm from './ProductForm';
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+// Helper para eliminar cookies
+function deleteCookie(name: string) {
+  document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
+
 interface Product {
   id: string;
   name: string;
@@ -15,30 +26,24 @@ interface Product {
   offer_percentage?: number;
 }
 
-interface ProductManagerProps {
-  adminKey: string;
-}
-
-export default function ProductManager({ adminKey: initialAdminKey }: ProductManagerProps) {
+export default function ProductManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [adminKey, setAdminKey] = useState(initialAdminKey || '');
+  const [adminKey, setAdminKey] = useState('');
 
   useEffect(() => {
-    // Obtener adminKey del sessionStorage si no se proporcionó
-    if (!adminKey) {
-      const key = sessionStorage.getItem('adminKey');
-      if (!key) {
-        window.location.href = '/admin/login';
-        return;
-      }
-      setAdminKey(key);
+    // Obtener adminKey de las cookies
+    const key = getCookie('admin_token');
+    if (!key) {
+      window.location.href = '/admin/login';
+      return;
     }
-  }, [adminKey]);
+    setAdminKey(key);
+  }, []);
 
   useEffect(() => {
     if (!showForm && !editingProduct && adminKey) {
@@ -51,13 +56,15 @@ export default function ProductManager({ adminKey: initialAdminKey }: ProductMan
       setLoading(true);
       setError('');
       const response = await fetch('/api/admin/get-all-products', {
+        credentials: 'include',
         headers: {
           'x-admin-key': adminKey,
         },
       });
 
       if (response.status === 401) {
-        sessionStorage.removeItem('adminKey');
+        deleteCookie('admin_token');
+        deleteCookie('admin_email');
         window.location.href = '/admin/login';
         return;
       }
@@ -83,13 +90,15 @@ export default function ProductManager({ adminKey: initialAdminKey }: ProductMan
     try {
       const response = await fetch(`/api/admin/delete-product?id=${id}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           'x-admin-key': adminKey,
         },
       });
 
       if (response.status === 401) {
-        sessionStorage.removeItem('adminKey');
+        deleteCookie('admin_token');
+        deleteCookie('admin_email');
         window.location.href = '/admin/login';
         return;
       }
