@@ -48,8 +48,10 @@ export default function CheckoutMode() {
     const loadUserData = async () => {
       try {
         const { data: { session } } = await supabaseClient.auth.getSession();
+        console.log('Checkout - Session:', session ? 'Found' : 'Not found');
         if (session?.user) {
           const user = session.user;
+          console.log('Checkout - User ID:', user.id);
           setUserId(user.id); // Guardar el userId
           const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
           const phone = user.user_metadata?.phone || '';
@@ -60,6 +62,8 @@ export default function CheckoutMode() {
             email: user.email || '',
             phone: phone,
           }));
+        } else {
+          console.log('Checkout - No user session, proceeding as guest');
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -125,6 +129,8 @@ export default function CheckoutMode() {
         user_id: userId // Incluir el userId si está logueado
       };
 
+      console.log('Checkout - Sending order data with user_id:', userId);
+
       const response = await fetch('/api/checkout/create-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,6 +138,7 @@ export default function CheckoutMode() {
       });
 
       const data = await response.json();
+      console.log('Checkout - Response:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Error al procesar el pago');

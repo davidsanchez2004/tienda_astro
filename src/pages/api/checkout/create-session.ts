@@ -7,6 +7,9 @@ export const POST: APIRoute = async ({ request, url }) => {
     const body = await request.json();
     const { items, customer, shipping_method, shipping_cost, subtotal, total, discountCode, user_id } = body;
 
+    console.log('Create-session - Received user_id:', user_id);
+    console.log('Create-session - Customer email:', customer?.email);
+
     // Validate
     if (!items || items.length === 0) {
       return new Response(JSON.stringify({ error: 'El carrito está vacío' }), { 
@@ -105,6 +108,8 @@ export const POST: APIRoute = async ({ request, url }) => {
         };
 
     // Create order in pending status
+    console.log('Create-session - Creating order with user_id:', user_id || null);
+    
     const { data: order, error: orderError } = await supabaseAdminClient
       .from('orders')
       .insert({
@@ -132,6 +137,8 @@ export const POST: APIRoute = async ({ request, url }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    console.log('Create-session - Order created:', order.id, 'with user_id:', order.user_id);
 
     // Create order items
     const orderItems = items.map((item: any) => ({

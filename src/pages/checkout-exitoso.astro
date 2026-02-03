@@ -20,13 +20,16 @@ const ADMIN_EMAIL = 'davidsanchezacosta0@gmail.com';
 // Verificar el pago real con Stripe
 if (sessionId && isStripeConfigured()) {
   try {
+    console.log('Checkout-exitoso - Verificando sesión:', sessionId);
     const session = await stripe.checkout.sessions.retrieve(sessionId);
+    console.log('Checkout-exitoso - Estado de pago:', session.payment_status);
     
     if (session.payment_status === 'paid') {
       paymentVerified = true;
       
       // Actualizar orden como pagada si existe
       if (orderId) {
+        console.log('Checkout-exitoso - Actualizando orden:', orderId);
         const { data, error: updateError } = await supabaseAdminClient
           .from('orders')
           .update({ 
@@ -41,9 +44,11 @@ if (sessionId && isStripeConfigured()) {
         
         if (!updateError && data) {
           orderData = data;
+          console.log('Checkout-exitoso - Orden actualizada, user_id:', data.user_id);
           
           // Enviar email de confirmación
           try {
+            console.log('Checkout-exitoso - Enviando email a:', data.guest_email);
             // Obtener items del pedido
             const { data: orderItems } = await supabaseAdminClient
               .from('order_items')
