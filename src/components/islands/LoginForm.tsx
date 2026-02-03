@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { supabaseClient } from '../../lib/supabase';
+import { onUserLogin } from '../../stores/useCart';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
@@ -32,6 +33,12 @@ export default function LoginForm() {
         setError(errorMessage);
         setLoading(false);
         return;
+      }
+
+      // SINCRONIZAR CARRITO AL HACER LOGIN
+      if (data.user?.id) {
+        console.log('[LoginForm] Login success, syncing cart for user:', data.user.id);
+        onUserLogin(data.user.id);
       }
 
       // Si llegamos aquí, el login fue exitoso

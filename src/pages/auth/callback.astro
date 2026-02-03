@@ -17,15 +17,31 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   </div>
 
   <script>
-    // Handle OAuth callback
-    const params = new URLSearchParams(window.location.search);
-    const hash = window.location.hash.slice(1);
+    import { supabaseClient } from '../../lib/supabase';
+    import { onUserLogin } from '../../stores/useCart';
     
-    if (hash || params.toString()) {
-      // Wait for Supabase to process the callback
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
+    // Handle OAuth callback
+    async function handleCallback() {
+      try {
+        // Esperar a que Supabase procese el callback
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        
+        if (session?.user?.id) {
+          console.log('[AuthCallback] User authenticated:', session.user.id);
+          // Sincronizar carrito con el nuevo usuario
+          onUserLogin(session.user.id);
+        }
+        
+        // Redirigir a inicio
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      } catch (error) {
+        console.error('[AuthCallback] Error:', error);
+        window.location.href = '/login';
+      }
     }
+    
+    handleCallback();
   </script>
 </BaseLayout>

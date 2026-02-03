@@ -66,6 +66,10 @@ import UserMenu from './islands/UserMenu.tsx';
 
 <script>
   import { supabaseClient } from '../lib/supabase';
+  import { onUserLogin, onUserLogout } from '../stores/useCart';
+  
+  // Variable para rastrear el estado anterior
+  let previousUserId: string | null = null;
   
   // Función para actualizar la visibilidad de los elementos de autenticación
   async function updateAuthUI() {
@@ -74,9 +78,25 @@ import UserMenu from './islands/UserMenu.tsx';
     
     try {
       const { data: { session } } = await supabaseClient.auth.getSession();
+      const currentUserId = session?.user?.id || null;
       
-      console.log('Auth session:', session);
+      console.log('[Header] Auth check - Previous:', previousUserId, 'Current:', currentUserId);
       
+      // SINCRONIZAR CARRITO CON CAMBIO DE SESIÓN
+      if (currentUserId && !previousUserId) {
+        // Login detectado
+        console.log('[Header] Login detected, syncing cart');
+        onUserLogin(currentUserId);
+      } else if (!currentUserId && previousUserId) {
+        // Logout detectado
+        console.log('[Header] Logout detected, syncing cart');
+        onUserLogout();
+      }
+      
+      // Actualizar el estado anterior
+      previousUserId = currentUserId;
+      
+      // Actualizar UI
       if (session?.user) {
         if (userMenuContainer) userMenuContainer.style.display = 'block';
         if (authButtons) authButtons.style.display = 'none';
@@ -89,6 +109,11 @@ import UserMenu from './islands/UserMenu.tsx';
     }
   }
   
+  // Inicializar previousUserId desde localStorage al cargar
+  if (typeof window !== 'undefined') {
+    previousUserId = localStorage.getItem('by_arena_auth_user_id');
+  }
+  
   // Ejecutar al cargar la página
   document.addEventListener('DOMContentLoaded', updateAuthUI);
   
@@ -97,7 +122,20 @@ import UserMenu from './islands/UserMenu.tsx';
   
   // Escuchar cambios de autenticación
   supabaseClient.auth.onAuthStateChange((event, session) => {
-    console.log('Auth state changed:', event, session);
+    const currentUserId = session?.user?.id || null;
+    
+    console.log('[Header] Auth state changed:', event, 'userId:', currentUserId);
+    
+    // SINCRONIZAR CARRITO
+    if (event === 'SIGNED_IN' && currentUserId) {
+      console.log('[Header] SIGNED_IN event, calling onUserLogin');
+      onUserLogin(currentUserId);
+    } else if (event === 'SIGNED_OUT') {
+      console.log('[Header] SIGNED_OUT event, calling onUserLogout');
+      onUserLogout();
+    }
+    
+    previousUserId = currentUserId;
     updateAuthUI();
   });
 </script>

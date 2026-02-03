@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabaseClient } from '../../lib/supabase';
+import { onUserLogout } from '../../stores/useCart';
 
 interface User {
   email?: string;
@@ -43,6 +44,10 @@ export default function UserMenu() {
   }, []);
 
   const handleLogout = async () => {
+    // SINCRONIZAR CARRITO AL HACER LOGOUT
+    console.log('[UserMenu] Logout, syncing cart');
+    onUserLogout();
+    
     await supabaseClient.auth.signOut();
     setUser(null);
     window.location.href = '/';
