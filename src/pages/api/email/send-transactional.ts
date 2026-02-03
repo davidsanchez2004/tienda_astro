@@ -14,6 +14,7 @@ import {
   generateDisputeNotificationHTML,
   generateDisputeNotificationPlainText,
 } from '../../../lib/additional-email-templates';
+import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
 
 interface SendEmailRequest {
   type?: 'welcome' | 'shipping' | 'refund' | 'return_request' | 'payment_confirmed' | 'payment_failed' | 'refund_confirmed' | 'dispute_notification';
@@ -29,36 +30,6 @@ interface SendEmailRequest {
   reason?: string;
   orderNumber?: string;
   returnNumber?: string;
-}
-
-async function sendEmail(to: string, subject: string, html: string, text: string) {
-  const apiKey = import.meta.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY no configurada');
-  }
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      from: 'noreply@byarena.com',
-      to,
-      subject,
-      html,
-      text,
-      reply_to: 'hola@byarena.com',
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Resend API error: ${JSON.stringify(error)}`);
-  }
-
-  return response.json();
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -185,12 +156,19 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    const result = await sendEmail(toEmail, subject, html, text);
+    const result = await sendEmailWithGmail(toEmail, subject, html, text);
+
+    if (!result.success) {
+      return new Response(
+        JSON.stringify({ error: result.error || 'Error al enviar email' }),
+        { status: 500 }
+      );
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        messageId: result.id,
+        messageId: result.messageId,
         message: 'Email enviado correctamente',
       }),
       { status: 200 }

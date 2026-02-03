@@ -1,6 +1,17 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Configuración de Gmail
+const GMAIL_USER = process.env.GMAIL_USER || '';
+const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD || '';
+
+// Crear transporter de nodemailer con Gmail
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: GMAIL_USER,
+    pass: GMAIL_PASSWORD, // Contraseña de aplicación de Google
+  },
+});
 
 interface OrderEmailData {
   orderId: string;
@@ -16,8 +27,8 @@ interface OrderEmailData {
 
 export async function sendOrderConfirmationEmail(data: OrderEmailData) {
   try {
-    const response = await resend.emails.send({
-      from: 'BY ARENA <noreply@byarena.com>',
+    const response = await transporter.sendMail({
+      from: `BY ARENA <${GMAIL_USER}>`,
       to: data.customerEmail,
       subject: `Confirmación de Pedido #${data.orderId.slice(0, 8)}`,
       html: `
@@ -85,8 +96,8 @@ export async function sendShippingNotificationEmail(
   trackingNumber: string
 ) {
   try {
-    return await resend.emails.send({
-      from: 'BY ARENA <noreply@byarena.com>',
+    return await transporter.sendMail({
+      from: `BY ARENA <${GMAIL_USER}>`,
       to: customerEmail,
       subject: 'Tu pedido ha sido enviado',
       html: `
@@ -123,8 +134,8 @@ export async function sendReturnApprovedEmail(
   refundAmount: number
 ) {
   try {
-    return await resend.emails.send({
-      from: 'BY ARENA <noreply@byarena.com>',
+    return await transporter.sendMail({
+      from: `BY ARENA <${GMAIL_USER}>`,
       to: customerEmail,
       subject: 'Tu devolución ha sido aprobada ✓',
       html: `

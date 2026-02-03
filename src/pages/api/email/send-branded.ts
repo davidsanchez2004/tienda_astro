@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
+import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
 import {
   generateOrderConfirmationCustomer,
   generateOrderNotificationAdmin,
@@ -17,9 +18,6 @@ import {
   type ReturnEmailData,
   type DiscountCodeEmailData,
 } from '../../../lib/email-templates-byarena';
-
-const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
-const FROM_EMAIL = import.meta.env.FROM_EMAIL || 'pedidos@byarena.com';
 
 // Función para obtener el email del admin desde la base de datos
 async function getAdminEmail(): Promise<string> {
@@ -74,42 +72,6 @@ interface SendEmailRequest {
 
 // Constante para el email del admin
 const ADMIN_NOTIFICATION_EMAIL = import.meta.env.ADMIN_EMAIL || 'admin@byarena.com';
-
-async function sendEmail(to: string, subject: string, html: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  if (!RESEND_API_KEY) {
-    console.error('RESEND_API_KEY no configurada');
-    return { success: false, error: 'Email service no configurado' };
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: `BY ARENA <${FROM_EMAIL}>`,
-        to,
-        subject,
-        html,
-        reply_to: 'hola@byarena.com',
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Resend API error:', error);
-      return { success: false, error: error.message || 'Error al enviar email' };
-    }
-
-    const result = await response.json();
-    return { success: true, messageId: result.id };
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return { success: false, error: 'Error de conexión' };
-  }
-}
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -244,7 +206,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Enviar email a cada destinatario
     const results = await Promise.all(
-      recipients.map(recipient => sendEmail(recipient, subject, html))
+      recipients.map(recipient => sendEmailWithGmail(recipient, subject, html))
     );
 
     const allSuccessful = results.every(r => r.success);
