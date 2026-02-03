@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getCart, saveCart, type CartItem } from '../../stores/useCart';
+import { supabaseClient } from '../../lib/supabase';
 
 // Get shipping method from localStorage
 function getShippingMethod(): 'delivery' | 'pickup' {
@@ -17,8 +18,43 @@ export default function CartDisplay() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
+  const [productStock, setProductStock] = useState<Record<string, number>>({});
+  const [stockLoading, setStockLoading] = useState(true);
   
   const shippingCost = shippingMethod === 'delivery' ? 2 : 0;
+
+  // Load stock for products in cart
+  const loadProductStock = async (cartItems: CartItem[]) => {
+    if (cartItems.length === 0) {
+      setProductStock({});
+      setStockLoading(false);
+      return;
+    }
+    
+    try {
+      const productIds = cartItems.map(item => item.product_id);
+      const { data, error } = await supabaseClient
+        .from('products')
+        .select('id, stock')
+        .in('id', productIds);
+      
+      if (error) {
+        console.error('Error loading stock:', error);
+        setStockLoading(false);
+        return;
+      }
+      
+      const stockMap: Record<string, number> = {};
+      data?.forEach(product => {
+        stockMap[product.id] = product.stock ?? 999; // Default high if no stock field
+      });
+      setProductStock(stockMap);
+    } catch (err) {
+      console.error('Error loading stock:', err);
+    } finally {
+      setStockLoading(false);
+    }
+  };
 
   // Mark as client-side and load cart + shipping method
   useEffect(() => {
@@ -26,6 +62,7 @@ export default function CartDisplay() {
     const loadedCart = getCart();
     setCart(loadedCart);
     setShippingMethod(getShippingMethod());
+    loadProductStock(loadedCart);
   }, []);
 
   // Save shipping method when it changes
@@ -39,15 +76,22 @@ export default function CartDisplay() {
   useEffect(() => {
     const handleCartUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
+      let newCart: CartItem[];
       if (customEvent.detail !== undefined) {
-        setCart(customEvent.detail);
+        newCart = customEvent.detail;
+        setCart(newCart);
       } else {
-        setCart(getCart());
+        newCart = getCart();
+        setCart(newCart);
       }
+      // Reload stock when cart changes
+      loadProductStock(newCart);
     };
 
     const handleStorageUpdate = () => {
-      setCart(getCart());
+      const newCart = getCart();
+      setCart(newCart);
+      loadProductStock(newCart);
     };
 
     window.addEventListener('cart-updated', handleCartUpdate);
@@ -63,11 +107,34 @@ export default function CartDisplay() {
       removeFromCart(itemId);
       return;
     }
-    const newCart = cart.map(item =>
-      item.id === itemId ? { ...item, quantity } : item
+    
+    // Find the item to check its stock
+    const item = cart.find(i => i.id === itemId);
+    if (!item) return;
+    
+    // Check stock limit
+    const stock = productStock[item.product_id] ?? 999;
+    if (quantity > stock) {
+      // Don't allow exceeding stock
+      return;
+    }
+    
+    const newCart = cart.map(i =>
+      i.id === itemId ? { ...i, quantity } : i
     );
     setCart(newCart);
     saveCart(newCart);
+  };
+
+  // Helper to check if item is at max stock
+  const isAtMaxStock = (item: CartItem): boolean => {
+    const stock = productStock[item.product_id] ?? 999;
+    return item.quantity >= stock;
+  };
+
+  // Get available stock for an item
+  const getAvailableStock = (item: CartItem): number => {
+    return productStock[item.product_id] ?? 999;
   };
 
   const removeFromCart = (itemId: string) => {
@@ -130,9 +197,15 @@ export default function CartDisplay() {
                   {item.name}
                 </h4>
               </a>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 mb-1">
                 €{item.price.toFixed(2)} c/u
               </p>
+              {/* Stock indicator */}
+              {!stockLoading && getAvailableStock(item) < 20 && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Stock disponible: {getAvailableStock(item)}
+                </p>
+              )}
               <div className="flex items-center gap-2 mb-2">
                 <button
                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -143,11 +216,22 @@ export default function CartDisplay() {
                 <span className="w-8 text-center font-medium">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="px-3 py-1 border border-arena-light rounded hover:bg-arena-pale transition-colors"
+                  disabled={isAtMaxStock(item)}
+                  className={`px-3 py-1 border border-arena-light rounded transition-colors ${
+                    isAtMaxStock(item) 
+                      ? 'opacity-50 cursor-not-allowed bg-gray-100' 
+                      : 'hover:bg-arena-pale'
+                  }`}
+                  title={isAtMaxStock(item) ? 'Stock máximo alcanzado' : 'Añadir uno más'}
                 >
                   +
                 </button>
               </div>
+              {isAtMaxStock(item) && (
+                <p className="text-xs text-amber-600 mb-1">
+                  ⚠️ Stock máximo alcanzado
+                </p>
+              )}
               <p className="text-sm font-semibold text-gray-900">
                 Subtotal: €{(item.price * item.quantity).toFixed(2)}
               </p>
