@@ -1,14 +1,12 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../../lib/supabase';
-
-const ADMIN_SECRET_KEY = import.meta.env.ADMIN_SECRET_KEY || 'AdminByArena2026!';
+import { isAdminAuthenticated } from '../../../../lib/admin-auth';
 
 // PATCH - Actualizar estado de orden y enviar emails
-export const PATCH: APIRoute = async ({ params, request }) => {
+export const PATCH: APIRoute = async ({ params, request, cookies }) => {
   try {
-    const adminKey = request.headers.get('x-admin-key');
-    
-    if (adminKey !== ADMIN_SECRET_KEY) {
+    // Verificar autenticación usando el helper
+    if (!isAdminAuthenticated(request, cookies)) {
       return new Response(
         JSON.stringify({ error: 'No autorizado' }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }

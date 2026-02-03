@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
+import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
 /**
  * API endpoint to run database migrations
- * Only accessible with admin key
+ * Only accessible with admin authentication
  */
-export const POST: APIRoute = async ({ request }) => {
-  const adminKey = request.headers.get('x-admin-key');
-  
-  if (adminKey !== import.meta.env.ADMIN_SECRET_KEY) {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  // Verificar autenticación de admin
+  if (!isAdminAuthenticated(request, cookies)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
   }
 

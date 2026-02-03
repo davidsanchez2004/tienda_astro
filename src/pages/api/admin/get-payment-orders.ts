@@ -1,16 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { APIRoute } from 'astro';
+import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
 const supabase = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.SUPABASE_SERVICE_KEY
 );
 
-export const GET: APIRoute = async (context) => {
+export const GET: APIRoute = async ({ request, cookies }) => {
   try {
-    // Verificar admin key
-    const adminKey = context.request.headers.get('x-admin-key');
-    if (adminKey !== import.meta.env.ADMIN_SECRET_KEY) {
+    // Verificar autenticación de admin
+    if (!isAdminAuthenticated(request, cookies)) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },

@@ -4,16 +4,42 @@ const ADMIN_SECRET_KEY = import.meta.env.ADMIN_SECRET_KEY || 'AdminByArena2026!'
 
 // Función para validar el token de admin
 export function validateAdminToken(token: string): boolean {
+  if (!token || token.length < 10) {
+    console.log('[AdminAuth] Token too short or empty');
+    return false;
+  }
+  
   try {
-    const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+    // Limpiar el token de posibles caracteres problemáticos
+    const cleanToken = token.trim();
+    
+    // Decodificar base64
+    let decoded: string;
+    try {
+      decoded = Buffer.from(cleanToken, 'base64').toString('utf-8');
+    } catch {
+      // Intentar con atob si Buffer falla (aunque no debería en Node)
+      decoded = atob(cleanToken);
+    }
+    
+    const payload = JSON.parse(decoded);
+    
+    // Verificar que tiene los campos esperados
+    if (!payload.email || !payload.exp) {
+      console.log('[AdminAuth] Token missing required fields');
+      return false;
+    }
+    
     // Verificar que no ha expirado
-    if (payload.exp && payload.exp > Date.now()) {
+    if (payload.exp > Date.now()) {
+      console.log('[AdminAuth] Token valid for:', payload.email);
       return true;
     }
-    console.log('[AdminAuth] Token expired');
+    
+    console.log('[AdminAuth] Token expired at:', new Date(payload.exp).toISOString());
     return false;
   } catch (e) {
-    console.log('[AdminAuth] Invalid token format:', e);
+    console.log('[AdminAuth] Invalid token format:', e instanceof Error ? e.message : 'unknown error');
     return false;
   }
 }
