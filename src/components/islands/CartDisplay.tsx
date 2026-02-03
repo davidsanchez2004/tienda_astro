@@ -1,31 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
-interface CartItem {
-  id: string;
-  product_id: string;
-  name: string;
-  image_url: string;
-  quantity: number;
-  price: number;
-}
-
-// Get cart from localStorage
-function getCart(): CartItem[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const cart = localStorage.getItem('by_arena_cart');
-    return cart ? JSON.parse(cart) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Save cart to localStorage
-function saveCart(cart: CartItem[]) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('by_arena_cart', JSON.stringify(cart));
-  window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
-}
+import { getCart, saveCart, type CartItem } from '../../stores/useCart';
 
 // Get shipping method from localStorage
 function getShippingMethod(): 'delivery' | 'pickup' {
@@ -63,15 +37,24 @@ export default function CartDisplay() {
 
   // Listen for cart updates from other components
   useEffect(() => {
-    const handleCartUpdate = () => {
+    const handleCartUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail !== undefined) {
+        setCart(customEvent.detail);
+      } else {
+        setCart(getCart());
+      }
+    };
+
+    const handleStorageUpdate = () => {
       setCart(getCart());
     };
 
     window.addEventListener('cart-updated', handleCartUpdate);
-    window.addEventListener('storage', handleCartUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
     return () => {
       window.removeEventListener('cart-updated', handleCartUpdate);
-      window.removeEventListener('storage', handleCartUpdate);
+      window.removeEventListener('storage', handleStorageUpdate);
     };
   }, []);
 

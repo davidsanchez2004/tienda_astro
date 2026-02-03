@@ -6,6 +6,11 @@ import { loadStripe } from '@stripe/stripe-js';
 interface User {
   id: string;
   email?: string;
+  user_metadata?: {
+    full_name?: string;
+    name?: string;
+    phone?: string;
+  };
 }
 
 export default function CheckoutForm() {
@@ -15,20 +20,6 @@ export default function CheckoutForm() {
   // Calculate shipping cost based on option
   const shippingCost = 0; // Will be calculated based on shippingOption
 
-  useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      setUser(session?.user || null);
-    }
-    init();
-
-    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-    });
-
-    return () => subscription?.unsubscribe();
-  }, []);
-  
   const [shippingOption, setShippingOption] = useState<'pickup' | 'home'>('pickup');
   const [couponCode, setCouponCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +27,7 @@ export default function CheckoutForm() {
 
   const [address, setAddress] = useState({
     name: '',
-    email: user?.email || '',
+    email: '',
     phone: '',
     street: '',
     number: '',
@@ -46,6 +37,48 @@ export default function CheckoutForm() {
     postal_code: '',
     country: 'Spain',
   });
+
+  useEffect(() => {
+    async function init() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      
+      // Autocompletar datos del usuario logueado
+      if (currentUser) {
+        const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+        const phone = currentUser.user_metadata?.phone || '';
+        
+        setAddress(prev => ({
+          ...prev,
+          name: fullName,
+          email: currentUser.email || '',
+          phone: phone,
+        }));
+      }
+    }
+    init();
+
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      
+      // Autocompletar datos del usuario logueado cuando cambia el estado de auth
+      if (currentUser) {
+        const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+        const phone = currentUser.user_metadata?.phone || '';
+        
+        setAddress(prev => ({
+          ...prev,
+          name: fullName,
+          email: currentUser.email || '',
+          phone: phone,
+        }));
+      }
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Product } from '../../lib/types';
+import { getCart, saveCart } from '../../stores/useCart';
 
 interface ProductDetailProps {
   product: Product;
@@ -9,24 +10,6 @@ interface ProductDetailProps {
 // Generate unique ID for cart items
 function generateId(): string {
   return `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-// Get cart from localStorage
-function getCart() {
-  if (typeof window === 'undefined') return [];
-  try {
-    const cart = localStorage.getItem('by_arena_cart');
-    return cart ? JSON.parse(cart) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Save cart to localStorage
-function saveCart(cart: any[]) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('by_arena_cart', JSON.stringify(cart));
-  window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
 }
 
 export default function ProductDetail({ product, categoryNames }: ProductDetailProps) {

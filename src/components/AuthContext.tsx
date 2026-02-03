@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabaseClient } from '../lib/supabase';
+import { handleSessionChange } from '../stores/useCart';
 
 interface AuthContextType {
   user: any | null;
@@ -16,7 +17,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check current session
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      // Sincronizar carrito con el usuario actual
+      handleSessionChange(currentUser?.id || null);
       setLoading(false);
     });
 
@@ -24,7 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      // Sincronizar carrito cuando cambia la sesión (login/logout)
+      handleSessionChange(currentUser?.id || null);
     });
 
     return () => subscription?.unsubscribe();
@@ -33,6 +40,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await supabaseClient.auth.signOut();
     setUser(null);
+    // Limpiar el usuario del carrito al cerrar sesión
+    handleSessionChange(null);
   };
 
   return (

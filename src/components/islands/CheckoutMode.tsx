@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCart, getCartTotal, clearCart, type CartItem } from '../../stores/useCart';
+import { supabaseClient } from '../../lib/supabase';
 
 // Get shipping method from localStorage
 function getShippingMethod(): 'delivery' | 'pickup' {
@@ -41,6 +42,48 @@ export default function CheckoutMode() {
     setCart(getCart());
     setTotal(getCartTotal());
     setShippingMethod(getShippingMethod());
+    
+    // Cargar datos del usuario logueado
+    const loadUserData = async () => {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session?.user) {
+          const user = session.user;
+          const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
+          const phone = user.user_metadata?.phone || '';
+          
+          setFormData(prev => ({
+            ...prev,
+            name: fullName,
+            email: user.email || '',
+            phone: phone,
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+    
+    loadUserData();
+  }, []);
+
+  // Escuchar cambios en el carrito (por cambio de sesión)
+  useEffect(() => {
+    const handleCartUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail !== undefined) {
+        setCart(customEvent.detail);
+        setTotal(customEvent.detail.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0));
+      } else {
+        setCart(getCart());
+        setTotal(getCartTotal());
+      }
+    };
+
+    window.addEventListener('cart-updated', handleCartUpdate);
+    return () => {
+      window.removeEventListener('cart-updated', handleCartUpdate);
+    };
   }, []);
 
   // Save shipping method when it changes
@@ -61,7 +104,7 @@ export default function CheckoutMode() {
 
     try {
       // Validations
-      if (!formData.name || !formData.email || !formData.phone) {
+      if (!formData.name || !formData.email) {
         throw new Error('Por favor completa todos los campos obligatorios');
       }
 
@@ -160,33 +203,18 @@ export default function CheckoutMode() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent"
                     />
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Teléfono *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent"
+                    />
                   </div>
                 </div>
               </div>
