@@ -42,28 +42,34 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Efecto de autenticación inicial - solo una vez
   useEffect(() => {
-    // Check admin authentication from cookies
-    console.log('[AdminDashboard] Verificando autenticación...');
+    console.log('[AdminDashboard] Inicializando...');
     const token = getCookie('admin_token');
     const email = getCookie('admin_email');
-    console.log('[AdminDashboard] Token encontrado:', token ? 'Sí' : 'No');
+    console.log('[AdminDashboard] Token:', token ? token.substring(0, 20) + '...' : 'NOT FOUND');
     console.log('[AdminDashboard] Email:', email);
     
-    if (!token) {
-      console.log('[AdminDashboard] No hay token, redirigiendo a login...');
+    if (token) {
+      setAdminKey(token);
+      setAdminEmail(email || '');
+      setIsAuthenticated(true);
+    } else {
+      // Si no hay token en el cliente pero llegamos aquí, el SSR debería haber redirigido
+      // Esto es un respaldo
+      console.log('[AdminDashboard] No token found, SSR should have redirected');
       window.location.href = '/admin/login';
-      return;
     }
-    
-    // Usar el token como clave de admin para las peticiones
-    setAdminKey(token);
-    setAdminEmail(email || '');
-    if (activeTab === 'orders') {
-      fetchOrders(token);
+  }, []);
+
+  // Efecto para cargar datos cuando cambia el tab
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'orders' && adminKey) {
+      fetchOrders(adminKey);
     }
-  }, [activeTab]);
+  }, [activeTab, isAuthenticated, adminKey]);
 
   const fetchOrders = async (key: string) => {
     try {

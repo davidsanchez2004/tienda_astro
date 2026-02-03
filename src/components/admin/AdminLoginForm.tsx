@@ -22,6 +22,7 @@ export default function AdminLoginForm() {
       // Validar la clave antes de guardarla
       const response = await fetch('/api/admin/login', {
         method: 'POST',
+        credentials: 'include', // Importante para recibir cookies
         headers: {
           'Content-Type': 'application/json',
         },
@@ -45,8 +46,19 @@ export default function AdminLoginForm() {
         return;
       }
 
-      // Login exitoso - la cookie se establece desde el servidor
-      // Redirigir al dashboard
+      // Login exitoso - guardar también en cookie del lado del cliente como respaldo
+      // Esto asegura que la cookie exista incluso si el servidor no la propagó correctamente
+      if (data.token && data.email) {
+        const maxAge = 60 * 60 * 24; // 24 horas en segundos
+        const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
+        document.cookie = `admin_token=${encodeURIComponent(data.token)}; path=/; expires=${expires}; SameSite=Lax`;
+        document.cookie = `admin_email=${encodeURIComponent(data.email)}; path=/; expires=${expires}; SameSite=Lax`;
+        console.log('[Admin Login] Cookies establecidas manualmente');
+      }
+      
+      // Pequeño delay para asegurar que las cookies se guarden
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       console.log('[Admin Login] Login exitoso, redirigiendo...');
       window.location.href = '/admin/dashboard';
     } catch (err) {

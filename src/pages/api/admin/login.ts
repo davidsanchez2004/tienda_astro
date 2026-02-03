@@ -57,11 +57,18 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     // Crear token y guardarlo en cookie
     const token = createAdminToken(email);
     
+    // Detectar si estamos en producción (HTTPS)
+    const isProduction = request.url.startsWith('https://') || 
+                         request.headers.get('x-forwarded-proto') === 'https';
+    
+    console.log('[Admin Login] Setting cookies, isProduction:', isProduction);
+    console.log('[Admin Login] Token:', token.substring(0, 20) + '...');
+    
     // Establecer cookie con el token
     cookies.set('admin_token', token, {
       path: '/',
       httpOnly: false, // Necesitamos leerla desde JS
-      secure: false, // Cambiar a true en producción con HTTPS
+      secure: isProduction,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 // 24 horas
     });
@@ -69,7 +76,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     cookies.set('admin_email', email, {
       path: '/',
       httpOnly: false,
-      secure: false,
+      secure: isProduction,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24
     });

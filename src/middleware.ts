@@ -28,6 +28,15 @@ function checkRateLimit(key: string): { allowed: boolean; remaining: number } {
   return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - record.count };
 }
 
+// Helper para extraer token del header Cookie
+function extractTokenFromHeader(cookieHeader: string): string | null {
+  const match = cookieHeader.match(/admin_token=([^;]+)/);
+  if (match) {
+    return decodeURIComponent(match[1]);
+  }
+  return null;
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const { pathname } = context.url;
   const { request } = context;
@@ -62,8 +71,41 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Protección de rutas admin
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
-    // Verificar sesión de admin (implementar según necesidades)
-    // Por ahora permite acceso para desarrollo
+    // Verificar token de admin en cookies
+    const adminToken = context.cookies.get('admin_token');
+    
+    // También verificar el header Cookie directamente como respaldo
+    const cookieHeader = request.headers.get('Cookie') || '';
+    const hasTokenInHeader = cookieHeader.includes('admin_token=');
+    
+    console.log('[Middleware] Admin route:', pathname);
+    console.log('[Middleware] Astro cookie:', adminToken?.value ? 'EXISTS' : 'NOT FOUND');
+    console.log('[Middleware] Cookie header has token:', hasTokenInHeader);
+    
+    if (!adminToken?.value && !hasTokenInHeader) {
+      console.log('[Middleware] No admin token, redirecting to login');
+      return context.redirect('/admin/login');
+    }
+    
+    // Validar que el token no ha expirado
+    const tokenValue = adminToken?.value || extractTokenFromHeader(cookieHeader);
+    if (tokenValue) {
+      try {
+        const payload = JSON.parse(Buffer.from(tokenValue, 'base64').toString());
+        if (!payload.exp || payload.exp < Date.now()) {
+          console.log('[Middleware] Token expired, redirecting to login');
+          context.cookies.delete('admin_token', { path: '/' });
+          context.cookies.delete('admin_email', { path: '/' });
+          return context.redirect('/admin/login');
+        }
+        console.log('[Middleware] Token valid');
+      } catch (e) {
+        console.log('[Middleware] Invalid token format, redirecting to login');
+        context.cookies.delete('admin_token', { path: '/' });
+        context.cookies.delete('admin_email', { path: '/' });
+        return context.redirect('/admin/login');
+      }
+    }
   }
 
   // Security headers

@@ -10,41 +10,77 @@ export function validateAdminToken(token: string): boolean {
     if (payload.exp && payload.exp > Date.now()) {
       return true;
     }
+    console.log('[AdminAuth] Token expired');
     return false;
-  } catch {
+  } catch (e) {
+    console.log('[AdminAuth] Invalid token format:', e);
     return false;
   }
 }
 
+// Helper para parsear cookies del header Cookie
+function parseCookies(cookieHeader: string): Record<string, string> {
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  
+  cookieHeader.split(';').forEach(cookie => {
+    const [name, ...rest] = cookie.trim().split('=');
+    if (name) {
+      cookies[name] = decodeURIComponent(rest.join('='));
+    }
+  });
+  return cookies;
+}
+
 // Función principal para verificar si una request es de admin autenticado
 export function isAdminAuthenticated(request: Request, cookies?: any): boolean {
-  // 1. Intentar con cookie
+  console.log('[AdminAuth] Checking authentication...');
+  
+  // 1. Intentar con cookie de Astro
   if (cookies) {
     const tokenFromCookie = cookies.get('admin_token')?.value;
+    console.log('[AdminAuth] Astro cookie admin_token:', tokenFromCookie ? 'EXISTS' : 'NOT FOUND');
     if (tokenFromCookie && validateAdminToken(tokenFromCookie)) {
+      console.log('[AdminAuth] Authenticated via Astro cookie');
       return true;
     }
   }
   
-  // 2. Intentar con header x-admin-key (clave secreta directa)
+  // 2. Intentar con header Cookie directamente (respaldo)
+  const cookieHeader = request.headers.get('Cookie');
+  if (cookieHeader) {
+    const parsedCookies = parseCookies(cookieHeader);
+    const tokenFromHeader = parsedCookies['admin_token'];
+    console.log('[AdminAuth] Cookie header admin_token:', tokenFromHeader ? 'EXISTS' : 'NOT FOUND');
+    if (tokenFromHeader && validateAdminToken(tokenFromHeader)) {
+      console.log('[AdminAuth] Authenticated via Cookie header');
+      return true;
+    }
+  }
+  
+  // 3. Intentar con header x-admin-key (clave secreta directa)
   const keyFromHeader = request.headers.get('x-admin-key');
   if (keyFromHeader === ADMIN_SECRET_KEY) {
+    console.log('[AdminAuth] Authenticated via ADMIN_SECRET_KEY');
     return true;
   }
   
-  // 3. Intentar con header x-admin-key (token)
+  // 4. Intentar con header x-admin-key (token)
   if (keyFromHeader && validateAdminToken(keyFromHeader)) {
+    console.log('[AdminAuth] Authenticated via x-admin-key token');
     return true;
   }
   
-  // 4. Intentar con Authorization header
+  // 5. Intentar con Authorization header
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
     if (validateAdminToken(token)) {
+      console.log('[AdminAuth] Authenticated via Authorization Bearer');
       return true;
     }
   }
   
+  console.log('[AdminAuth] Authentication FAILED');
   return false;
 }
