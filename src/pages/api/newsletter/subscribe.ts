@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
+import { sendEmail } from '../../../lib/gmail';
+import { generateNewsletterWelcome } from '../../../lib/email-templates-byarena';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
@@ -46,7 +48,6 @@ export const POST: APIRoute = async ({ request }) => {
 
         if (error) throw error;
       }
-      // Si está pending, enviamos de nuevo el email
     } else {
       // Crear nueva suscripción
       const { error } = await supabaseAdminClient
@@ -71,25 +72,21 @@ export const POST: APIRoute = async ({ request }) => {
       .single();
 
     if (subscriber?.confirmation_token) {
-      // Enviar email de confirmación
+      // Enviar email de confirmación usando Gmail
       const baseUrl = new URL(request.url).origin;
       const confirmUrl = `${baseUrl}/newsletter/confirmar?token=${subscriber.confirmation_token}`;
 
       try {
-        await fetch(`${baseUrl}/api/email/send-branded`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'newsletter_welcome',
-            to: email,
-            data: {
-              confirmUrl
-            }
-          })
+        const { subject, html } = generateNewsletterWelcome({ confirmUrl });
+        
+        await sendEmail({
+          to: email,
+          subject,
+          html,
+          from: process.env.GMAIL_USER
         });
       } catch (emailError) {
         console.error('Error sending confirmation email:', emailError);
-        // No fallamos si el email no se envía, la suscripción ya está guardada
       }
     }
 
@@ -100,12 +97,11 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-
   } catch (error) {
-    console.error('Error subscribing to newsletter:', error);
+    console.error('Newsletter subscription error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Error al procesar la suscripción' 
+      error: error instanceof Error ? error.message : 'Error al suscribirse' 
     }), { 
       status: 500,
       headers: { 'Content-Type': 'application/json' }
