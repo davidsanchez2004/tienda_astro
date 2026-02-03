@@ -45,30 +45,10 @@ export default function AdminLoginForm() {
         return;
       }
 
-      // Login exitoso - guardar credenciales y redirigir
-      console.log('[Admin Login] Login exitoso, guardando en sessionStorage...');
-      try {
-        sessionStorage.setItem('adminKey', adminKey);
-        sessionStorage.setItem('adminEmail', adminEmail);
-        
-        // Verificar que se guardó
-        const savedKey = sessionStorage.getItem('adminKey');
-        console.log('[Admin Login] Clave guardada:', savedKey ? 'Sí' : 'No');
-        
-        if (savedKey) {
-          // Pequeño delay para asegurar que sessionStorage se sincronice
-          setTimeout(() => {
-            window.location.href = '/admin/dashboard';
-          }, 100);
-        } else {
-          setError('Error guardando la sesión. Intenta de nuevo.');
-          setLoading(false);
-        }
-      } catch (storageError) {
-        console.error('[Admin Login] Error guardando en sessionStorage:', storageError);
-        setError('Error de almacenamiento. Verifica que las cookies están habilitadas.');
-        setLoading(false);
-      }
+      // Login exitoso - la cookie se establece desde el servidor
+      // Redirigir al dashboard
+      console.log('[Admin Login] Login exitoso, redirigiendo...');
+      window.location.href = '/admin/dashboard';
     } catch (err) {
       setError('Error al iniciar sesión');
       setLoading(false);

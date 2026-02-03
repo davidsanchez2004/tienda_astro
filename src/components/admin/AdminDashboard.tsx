@@ -21,6 +21,17 @@ interface Order {
   shipped_at?: string;
 }
 
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+// Helper para eliminar cookies
+function deleteCookie(name: string) {
+  document.cookie = name + '=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'orders' | 'returns' | 'products' | 'categories' | 'discounts' | 'blog' | 'newsletter'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -33,22 +44,24 @@ export default function AdminDashboard() {
   const [adminEmail, setAdminEmail] = useState('');
 
   useEffect(() => {
-    // Check admin authentication
+    // Check admin authentication from cookies
     console.log('[AdminDashboard] Verificando autenticación...');
-    const key = sessionStorage.getItem('adminKey');
-    const email = sessionStorage.getItem('adminEmail');
-    console.log('[AdminDashboard] Key encontrada:', key ? 'Sí' : 'No');
+    const token = getCookie('admin_token');
+    const email = getCookie('admin_email');
+    console.log('[AdminDashboard] Token encontrado:', token ? 'Sí' : 'No');
     console.log('[AdminDashboard] Email:', email);
     
-    if (!key) {
-      console.log('[AdminDashboard] No hay key, redirigiendo a login...');
+    if (!token) {
+      console.log('[AdminDashboard] No hay token, redirigiendo a login...');
       window.location.href = '/admin/login';
       return;
     }
-    setAdminKey(key);
+    
+    // Usar el token como clave de admin para las peticiones
+    setAdminKey(token);
     setAdminEmail(email || '');
     if (activeTab === 'orders') {
-      fetchOrders(key);
+      fetchOrders(token);
     }
   }, [activeTab]);
 
@@ -85,8 +98,8 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('adminKey');
-    sessionStorage.removeItem('adminEmail');
+    deleteCookie('admin_token');
+    deleteCookie('admin_email');
     window.location.href = '/admin/login';
   };
 

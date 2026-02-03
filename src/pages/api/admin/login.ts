@@ -3,7 +3,13 @@ import { supabaseAdminClient } from '../../../lib/supabase';
 
 const ADMIN_SECRET_KEY = import.meta.env.ADMIN_SECRET_KEY || 'AdminByArena2026!';
 
-export const POST: APIRoute = async ({ request }) => {
+// Crear un token simple (en producción usarías JWT)
+function createAdminToken(email: string): string {
+  const payload = { email, exp: Date.now() + (24 * 60 * 60 * 1000) }; // 24 horas
+  return Buffer.from(JSON.stringify(payload)).toString('base64');
+}
+
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -48,11 +54,32 @@ export const POST: APIRoute = async ({ request }) => {
         .insert({ key: 'admin_email', value: email });
     }
 
+    // Crear token y guardarlo en cookie
+    const token = createAdminToken(email);
+    
+    // Establecer cookie con el token
+    cookies.set('admin_token', token, {
+      path: '/',
+      httpOnly: false, // Necesitamos leerla desde JS
+      secure: false, // Cambiar a true en producción con HTTPS
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 // 24 horas
+    });
+
+    cookies.set('admin_email', email, {
+      path: '/',
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24
+    });
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Login exitoso',
-        email: email
+        email: email,
+        token: token
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
