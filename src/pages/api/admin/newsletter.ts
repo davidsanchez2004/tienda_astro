@@ -1,16 +1,10 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
-
-const ADMIN_SECRET_KEY = import.meta.env.ADMIN_SECRET_KEY || 'AdminByArena2026!';
-
-function isAuthorized(request: Request): boolean {
-  const adminKey = request.headers.get('x-admin-key');
-  return adminKey === ADMIN_SECRET_KEY;
-}
+import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
 // GET - Obtener todos los suscriptores
-export const GET: APIRoute = async ({ request }) => {
-  if (!isAuthorized(request)) {
+export const GET: APIRoute = async ({ request, cookies }) => {
+  if (!isAdminAuthenticated(request, cookies)) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -46,8 +40,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // DELETE - Eliminar suscriptor
-export const DELETE: APIRoute = async ({ request, url }) => {
-  if (!isAuthorized(request)) {
+export const DELETE: APIRoute = async ({ request, url, cookies }) => {
+  if (!isAdminAuthenticated(request, cookies)) {
     return new Response(JSON.stringify({ error: 'No autorizado' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }

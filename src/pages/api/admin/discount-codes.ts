@@ -1,13 +1,10 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
-
-const ADMIN_SECRET_KEY = import.meta.env.ADMIN_SECRET_KEY || 'AdminByArena2026!';
+import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
 // GET - Obtener todos los códigos de descuento
-export const GET: APIRoute = async ({ request }) => {
-  const adminKey = request.headers.get('x-admin-key');
-  
-  if (adminKey !== ADMIN_SECRET_KEY) {
+export const GET: APIRoute = async ({ request, cookies }) => {
+  if (!isAdminAuthenticated(request, cookies)) {
     return new Response(
       JSON.stringify({ error: 'No autorizado' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -35,10 +32,8 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 // POST - Crear nuevo código de descuento
-export const POST: APIRoute = async ({ request }) => {
-  const adminKey = request.headers.get('x-admin-key');
-  
-  if (adminKey !== ADMIN_SECRET_KEY) {
+export const POST: APIRoute = async ({ request, cookies }) => {
+  if (!isAdminAuthenticated(request, cookies)) {
     return new Response(
       JSON.stringify({ error: 'No autorizado' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
@@ -158,10 +153,8 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 // DELETE - Eliminar/Desactivar código
-export const DELETE: APIRoute = async ({ request }) => {
-  const adminKey = request.headers.get('x-admin-key');
-  
-  if (adminKey !== ADMIN_SECRET_KEY) {
+export const DELETE: APIRoute = async ({ request, cookies }) => {
+  if (!isAdminAuthenticated(request, cookies)) {
     return new Response(
       JSON.stringify({ error: 'No autorizado' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }

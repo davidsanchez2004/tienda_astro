@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
+import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
 interface CreateProductRequest {
   name: string;
@@ -12,11 +13,10 @@ interface CreateProductRequest {
   active: boolean;
 }
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     // Verificar autenticación admin
-    const adminKey = request.headers.get('x-admin-key');
-    if (adminKey !== import.meta.env.ADMIN_SECRET_KEY) {
+    if (!isAdminAuthenticated(request, cookies)) {
       return new Response(
         JSON.stringify({ error: 'No autorizado' }),
         { status: 401 }

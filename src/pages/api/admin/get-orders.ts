@@ -1,42 +1,11 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
-
-// Función para validar el token de admin
-function validateAdminToken(token: string): boolean {
-  try {
-    const payload = JSON.parse(Buffer.from(token, 'base64').toString());
-    // Verificar que no ha expirado
-    if (payload.exp && payload.exp > Date.now()) {
-      return true;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
+import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
 export const GET: APIRoute = async ({ request, cookies }) => {
   try {
-    // Verify admin authentication - primero intentar con cookie, luego header
-    const tokenFromCookie = cookies.get('admin_token')?.value;
-    const tokenFromHeader = request.headers.get('x-admin-key');
-    
-    let isValid = false;
-    
-    // Validar token de cookie
-    if (tokenFromCookie && validateAdminToken(tokenFromCookie)) {
-      isValid = true;
-    }
-    // Fallback: validar con la clave secreta directa (para compatibilidad)
-    else if (tokenFromHeader === import.meta.env.ADMIN_SECRET_KEY) {
-      isValid = true;
-    }
-    // Fallback: validar token desde header
-    else if (tokenFromHeader && validateAdminToken(tokenFromHeader)) {
-      isValid = true;
-    }
-    
-    if (!isValid) {
+    // Verify admin authentication
+    if (!isAdminAuthenticated(request, cookies)) {
       return new Response(
         JSON.stringify({ error: 'No autorizado' }),
         { status: 401 }
