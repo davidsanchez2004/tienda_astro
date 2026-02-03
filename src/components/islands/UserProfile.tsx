@@ -43,48 +43,29 @@ export default function UserProfile() {
 
   const loadUserData = async (currentUser: User) => {
     try {
-      // Load orders - buscar por user_id O por email del usuario
-      const userEmail = currentUser.email;
+      // Obtener el token de sesión para autenticar la petición
+      const { data: { session } } = await supabaseClient.auth.getSession();
       
-      // Primero buscar por user_id
-      const { data: ordersById } = await supabaseClient
-        .from('orders')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      // También buscar por email (para pedidos como invitado)
-      let ordersByEmail: any[] = [];
-      if (userEmail) {
-        const { data: emailOrders } = await supabaseClient
-          .from('orders')
-          .select('*')
-          .eq('guest_email', userEmail)
-          .is('user_id', null)
-          .order('created_at', { ascending: false });
+      if (session?.access_token) {
+        // Usar el API endpoint que bypasa RLS
+        const response = await fetch('/api/orders/my-orders', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        });
         
-        ordersByEmail = emailOrders || [];
-        
-        // Vincular pedidos antiguos al usuario actual
-        if (ordersByEmail.length > 0) {
-          const orderIds = ordersByEmail.map(o => o.id);
-          await supabaseClient
-            .from('orders')
-            .update({ user_id: currentUser.id })
-            .in('id', orderIds);
+        if (response.ok) {
+          const data = await response.json();
+          setOrders(data.orders || []);
+          console.log('UserProfile - Orders loaded:', data.orders?.length || 0);
+        } else {
+          console.error('Error loading orders from API');
+          setOrders([]);
         }
+      } else {
+        console.log('UserProfile - No access token, cannot load orders');
+        setOrders([]);
       }
-
-      // Combinar y eliminar duplicados
-      const allOrders = [...(ordersById || []), ...ordersByEmail];
-      const uniqueOrders = allOrders.filter((order, index, self) =>
-        index === self.findIndex((o) => o.id === order.id)
-      );
-      
-      // Ordenar por fecha
-      uniqueOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-      setOrders(uniqueOrders);
 
       // Load addresses
       const { data: addressesData } = await supabaseClient
