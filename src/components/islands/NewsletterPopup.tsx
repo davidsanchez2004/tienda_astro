@@ -102,14 +102,10 @@ export default function NewsletterPopup() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">¡Bienvenida a BY ARENA!</h3>
-              <p className="text-gray-600 mb-4">
-                Revisa tu email para confirmar tu suscripción y recibir tu código de descuento.
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Bienvenida a BY ARENA!</h3>
+              <p className="text-gray-600">
+                Revisa tu email para confirmar tu suscripcion y recibir tu <strong>codigo de descuento del 10%</strong>.
               </p>
-              <div className="bg-arena-pale rounded-lg p-4">
-                <p className="text-sm text-gray-600 mb-1">Tu código de descuento:</p>
-                <p className="text-2xl font-bold text-arena font-mono">BIENVENIDO10</p>
-              </div>
             </div>
           ) : (
             <>
