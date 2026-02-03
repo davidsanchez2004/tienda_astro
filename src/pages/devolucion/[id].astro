@@ -1,6 +1,33 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ReturnForm from '../../components/islands/ReturnForm';
+import { supabaseAdminClient } from '../../lib/supabase';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/devoluciones');
+}
+
+// Obtener datos del pedido
+const { data: order, error } = await supabaseAdminClient
+  .from('orders')
+  .select('id, total, guest_email, guest_first_name, guest_last_name, status, created_at')
+  .eq('id', id)
+  .single();
+
+if (error || !order) {
+  return Astro.redirect('/devoluciones?error=order-not-found');
+}
+
+// Solo permitir devoluciones de pedidos entregados o enviados
+const allowedStatuses = ['delivered', 'shipped', 'paid', 'processing'];
+if (!allowedStatuses.includes(order.status)) {
+  return Astro.redirect('/devoluciones?error=invalid-status');
+}
+
+const orderNumber = order.id.slice(0, 8).toUpperCase();
+const customerEmail = order.guest_email || '';
 ---
 
 <BaseLayout title="Solicitar Devolución | BY ARENA" description="Gestiona tu devolución">
@@ -9,6 +36,12 @@ import ReturnForm from '../../components/islands/ReturnForm';
       Solicitar Devolución
     </h1>
 
-    <ReturnForm client:load />
+    <ReturnForm 
+      client:load 
+      orderId={order.id}
+      orderNumber={orderNumber}
+      orderTotal={order.total}
+      customerEmail={customerEmail}
+    />
   </div>
 </BaseLayout>

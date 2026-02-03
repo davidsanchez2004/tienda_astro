@@ -49,7 +49,7 @@ export default function ProductManager() {
     if (!showForm && !editingProduct && adminKey) {
       fetchProducts();
     }
-  }, [showForm, editingProduct]);
+  }, [showForm, editingProduct, adminKey]);
 
   const fetchProducts = async () => {
     try {

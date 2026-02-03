@@ -16,8 +16,15 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
 
-    // Buscar orden
-    const { data: order, error: orderError } = await supabaseAdminClient
+    // Limpiar orderId - quitar # y espacios
+    const cleanOrderId = orderId.replace(/^#/, '').trim().toUpperCase();
+    
+    // Buscar orden - primero por ID exacto, luego por prefijo
+    let order = null;
+    let orderError = null;
+    
+    // Intentar búsqueda por ID exacto (UUID completo)
+    const { data: exactOrder, error: exactError } = await supabaseAdminClient
       .from('orders')
       .select(`
         id,
@@ -38,12 +45,49 @@ export const POST: APIRoute = async ({ request }) => {
         tracking_number,
         carrier
       `)
-      .eq('id', orderId)
+      .eq('id', cleanOrderId)
       .single();
+    
+    if (exactOrder) {
+      order = exactOrder;
+    } else {
+      // Buscar por prefijo del ID (número de orden como se muestra al cliente)
+      const { data: prefixOrders, error: prefixError } = await supabaseAdminClient
+        .from('orders')
+        .select(`
+          id,
+          checkout_type,
+          guest_email,
+          guest_first_name,
+          guest_last_name,
+          guest_phone,
+          total,
+          status,
+          created_at,
+          updated_at,
+          shipping_address,
+          shipping_city,
+          shipping_state,
+          shipping_zip,
+          shipping_country,
+          tracking_number,
+          carrier
+        `)
+        .ilike('id', `${cleanOrderId}%`);
+      
+      if (prefixOrders && prefixOrders.length > 0) {
+        // Buscar la orden que coincida con el email
+        order = prefixOrders.find(o => 
+          o.guest_email?.toLowerCase() === email.toLowerCase()
+        ) || prefixOrders[0];
+      } else {
+        orderError = prefixError || exactError;
+      }
+    }
 
-    if (orderError || !order) {
+    if (!order) {
       return new Response(
-        JSON.stringify({ error: 'Orden no encontrada' }),
+        JSON.stringify({ error: 'Orden no encontrada. Verifica el número de orden y email.' }),
         { status: 404 }
       );
     }
