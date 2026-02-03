@@ -115,10 +115,15 @@ export default function AdminDashboard() {
   // Filter and search orders
   const filteredOrders = orders.filter(order => {
     const matchesFilter = filter === 'all' || order.status === filter;
-    const matchesSearch =
-      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.guest_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = (searchTerm || '').toLowerCase();
+    const orderNumber = (order.orderNumber || order.id || '').toLowerCase();
+    const guestEmail = (order.guest_email || '').toLowerCase();
+    const orderId = (order.id || '').toLowerCase();
+    
+    const matchesSearch = !searchTerm || 
+      orderNumber.includes(searchLower) ||
+      guestEmail.includes(searchLower) ||
+      orderId.includes(searchLower);
     return matchesFilter && matchesSearch;
   });
 
