@@ -529,11 +529,11 @@ async function sendPaymentConfirmationEmail(order: any): Promise<void> {
     
     // Enviar email al cliente
     try {
-      const customerEmailContent = generateOrderConfirmationCustomer(orderData);
+      const customerEmailHtml = generateOrderConfirmationCustomer(orderData);
       await sendEmailWithGmail({
         to: customerEmail,
-        subject: customerEmailContent.subject,
-        html: customerEmailContent.html,
+        subject: `¡Gracias por tu pedido! #${orderData.orderNumber} - BY ARENA`,
+        html: customerEmailHtml,
       });
       console.log('Customer confirmation email sent to:', customerEmail);
     } catch (err) {
@@ -542,11 +542,11 @@ async function sendPaymentConfirmationEmail(order: any): Promise<void> {
     
     // Enviar email al admin
     try {
-      const adminEmailContent = generateOrderNotificationAdmin(orderData);
+      const adminEmailHtml = generateOrderNotificationAdmin(orderData);
       await sendEmailWithGmail({
         to: ADMIN_EMAIL,
-        subject: adminEmailContent.subject,
-        html: adminEmailContent.html,
+        subject: `Nuevo pedido #${orderData.orderNumber} de ${customerName}`,
+        html: adminEmailHtml,
       });
       console.log('Admin notification email sent to:', ADMIN_EMAIL);
     } catch (err) {

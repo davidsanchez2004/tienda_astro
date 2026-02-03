@@ -2,6 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { supabaseAdminClient } from '../lib/supabase';
 import { stripe, isStripeConfigured } from '../lib/stripe';
+import { sendEmailWithGmail } from '../lib/gmail-transporter';
+import { generateOrderConfirmationCustomer, generateOrderNotificationAdmin } from '../lib/email-templates-byarena';
 
 const { searchParams } = new URL(Astro.request.url);
 const sessionId = searchParams.get('session_id');
@@ -10,6 +12,10 @@ const orderId = searchParams.get('order');
 let paymentVerified = false;
 let orderData = null;
 let error = null;
+let emailSent = false;
+
+// Email del admin hardcodeado
+const ADMIN_EMAIL = 'davidsanchezacosta0@gmail.com';
 
 // Verificar el pago real con Stripe
 if (sessionId && isStripeConfigured()) {
@@ -26,6 +32,7 @@ if (sessionId && isStripeConfigured()) {
           .update({ 
             status: 'paid', 
             payment_status: 'paid',
+            stripe_payment_intent_id: session.payment_intent,
             updated_at: new Date().toISOString()
           })
           .eq('id', orderId)
@@ -34,6 +41,63 @@ if (sessionId && isStripeConfigured()) {
         
         if (!updateError && data) {
           orderData = data;
+          
+          // Enviar email de confirmación
+          try {
+            // Obtener items del pedido
+            const { data: orderItems } = await supabaseAdminClient
+              .from('order_items')
+              .select('*, products(name)')
+              .eq('order_id', orderId);
+            
+            const customerEmail = data.guest_email;
+            const customerName = data.guest_first_name 
+              ? `${data.guest_first_name} ${data.guest_last_name || ''}`.trim()
+              : 'Cliente';
+            
+            if (customerEmail) {
+              const items = (orderItems || []).map((item: any) => ({
+                  name: item.products?.name || 'Producto',
+                  quantity: item.quantity,
+                  price: item.price,
+                }));
+                
+                const emailData = {
+                  orderId: data.id,
+                  orderNumber: data.id.slice(0, 8).toUpperCase(),
+                  customerName,
+                  customerEmail,
+                  items,
+                  subtotal: data.subtotal || data.total,
+                  shippingCost: data.shipping_cost || 0,
+                  discount: data.discount_amount || 0,
+                  total: data.total,
+                  shippingAddress: data.shipping_address || {},
+                  shippingMethod: data.shipping_option as 'home' | 'pickup',
+                };
+                
+                // Enviar email al cliente
+                const customerEmailHtml = generateOrderConfirmationCustomer(emailData);
+                await sendEmailWithGmail({
+                  to: customerEmail,
+                  subject: `¡Gracias por tu pedido! #${emailData.orderNumber} - BY ARENA`,
+                  html: customerEmailHtml,
+                });
+                
+                // Enviar email al admin
+                const adminEmailHtml = generateOrderNotificationAdmin(emailData);
+                await sendEmailWithGmail({
+                  to: ADMIN_EMAIL,
+                  subject: `Nuevo pedido #${emailData.orderNumber} de ${customerName}`,
+                  html: adminEmailHtml,
+                });
+                
+                emailSent = true;
+                console.log('Confirmation emails sent for order:', orderId);
+              }
+            } catch (emailError) {
+              console.error('Error sending confirmation email:', emailError);
+            }
         }
       }
     }
