@@ -32,13 +32,15 @@ import type { Transporter } from 'nodemailer';
 // En Astro SSR, usamos import.meta.env en tiempo de build
 // y process.env en runtime del servidor Node.js
 const getEnvVar = (key: string, fallback: string = ''): string => {
-  // Primero intentar process.env (runtime en Node.js)
+  // En Astro, import.meta.env funciona tanto en build como en runtime
+  // @ts-ignore
+  if (import.meta.env && import.meta.env[key]) {
+    // @ts-ignore
+    return import.meta.env[key] as string;
+  }
+  // Fallback a process.env (para Node.js puro)
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key] as string;
-  }
-  // Fallback a import.meta.env (build time en Astro)
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
-    return import.meta.env[key] as string;
   }
   return fallback;
 };
@@ -47,6 +49,12 @@ const GMAIL_USER = getEnvVar('GMAIL_USER');
 const GMAIL_PASSWORD = getEnvVar('GMAIL_PASSWORD');
 const ADMIN_EMAIL = getEnvVar('ADMIN_EMAIL', 'admin@byarena.com');
 const SITE_NAME = 'BY ARENA';
+
+// Debug: Log de configuración (solo en desarrollo)
+console.log('📧 Email Config:', {
+  user: GMAIL_USER ? `${GMAIL_USER.slice(0, 5)}***` : 'NO CONFIGURADO',
+  passwordSet: !!GMAIL_PASSWORD,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VALIDACIÓN DE CONFIGURACIÓN
