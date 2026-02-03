@@ -14,13 +14,8 @@ COPY . .
 # Build
 RUN npm run build
 
-# Instalar serve globalmente para servir la app
-RUN npm install -g serve
-
 # Exponer puerto
 EXPOSE 3000
 
-# Start
-ENV HOST=0.0.0.0
-ENV PORT=3000
-CMD ["node", "dist/server/entry.mjs"]
+# Start - Usar las variables de entorno correctas
+CMD ["node", "--experimental-detect-module-unhandled-rejections", "dist/server/entry.mjs"]
