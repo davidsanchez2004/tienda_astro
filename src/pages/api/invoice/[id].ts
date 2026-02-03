@@ -1,8 +1,12 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ params }) => {
   const { id } = params;
+
+  console.log('[Invoice API] Request for order:', id);
 
   if (!id) {
     return new Response('ID de pedido no proporcionado', { status: 400 });

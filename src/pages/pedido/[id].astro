@@ -22,7 +22,7 @@ if (orderError || !order) {
 // Obtener los items del pedido
 const { data: orderItems, error: itemsError } = await supabaseAdminClient
   .from('order_items')
-  .select('*, products(id, name, image_url, slug)')
+  .select('*, products(id, name, image_url, sku)')
   .eq('order_id', id);
 
 console.log('Order items query result:', { orderItems, itemsError, orderId: id });
