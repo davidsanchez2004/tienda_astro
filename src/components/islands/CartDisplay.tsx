@@ -23,7 +23,7 @@ export default function CartDisplay() {
   
   const shippingCost = shippingMethod === 'delivery' ? 2 : 0;
 
-  // Load stock for products in cart
+  // Load stock for products in cart and auto-correct quantities that exceed stock
   const loadProductStock = async (cartItems: CartItem[]) => {
     if (cartItems.length === 0) {
       setProductStock({});
@@ -46,9 +46,28 @@ export default function CartDisplay() {
       
       const stockMap: Record<string, number> = {};
       data?.forEach(product => {
-        stockMap[product.id] = product.stock ?? 999; // Default high if no stock field
+        stockMap[product.id] = product.stock ?? 999;
       });
       setProductStock(stockMap);
+      
+      // Auto-correct cart items that exceed available stock
+      let needsUpdate = false;
+      const correctedCart = cartItems.map(item => {
+        const availableStock = stockMap[item.product_id] ?? 999;
+        if (item.quantity > availableStock) {
+          needsUpdate = true;
+          // If stock is 0, we'll still keep the item but with quantity 0 (will be filtered)
+          return { ...item, quantity: Math.max(availableStock, 0) };
+        }
+        return item;
+      }).filter(item => item.quantity > 0); // Remove items with 0 stock
+      
+      if (needsUpdate) {
+        setCart(correctedCart);
+        saveCart(correctedCart);
+        // Notify about the correction
+        window.dispatchEvent(new CustomEvent('cart-updated', { detail: correctedCart }));
+      }
     } catch (err) {
       console.error('Error loading stock:', err);
     } finally {
