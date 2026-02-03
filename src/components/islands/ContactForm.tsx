@@ -35,7 +35,8 @@ export default function ContactForm() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            type: 'contact_notification',
+            template: 'contact_notification',
+            to: 'admin@byarena.com', // Se sobreescribe en la API
             data: {
               name,
               email,

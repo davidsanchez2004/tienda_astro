@@ -103,7 +103,7 @@ export default function SearchProducts() {
             {products.map((product) => (
               <a
                 key={product.id}
-                href={`/producto/${product.slug}`}
+                href={`/producto/${product.id}`}
                 className="group bg-white rounded-xl border border-arena-light overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <div className="aspect-square bg-arena-pale">

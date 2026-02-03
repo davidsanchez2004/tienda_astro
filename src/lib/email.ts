@@ -1,6 +1,9 @@
-import { Resend } from 'resend';
+/**
+ * BY ARENA - Sistema de Emails (usando Gmail/Nodemailer)
+ * Este archivo re-exporta las funciones de gmail.ts para mantener compatibilidad
+ */
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { sendEmail } from './gmail';
 
 interface OrderEmailData {
   orderId: string;
@@ -16,8 +19,7 @@ interface OrderEmailData {
 
 export async function sendOrderConfirmationEmail(data: OrderEmailData) {
   try {
-    const response = await resend.emails.send({
-      from: 'BY ARENA <noreply@byarena.com>',
+    const result = await sendEmail({
       to: data.customerEmail,
       subject: `Confirmación de Pedido #${data.orderId.slice(0, 8)}`,
       html: `
@@ -66,13 +68,17 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData) {
           
           <div style="background: #F5F1ED; padding: 20px; text-align: center; color: #666; font-size: 12px;">
             <p>BY ARENA - Bisutería y Complementos Premium</p>
-            <p>© 2024 Todos los derechos reservados.</p>
+            <p>© 2026 Todos los derechos reservados.</p>
           </div>
         </div>
       `,
     });
 
-    return response;
+    if (!result.success) {
+      throw new Error(result.error || 'Error enviando email');
+    }
+
+    return { id: result.messageId };
   } catch (error) {
     console.error('Error sending email:', error);
     throw error;
@@ -85,8 +91,7 @@ export async function sendShippingNotificationEmail(
   trackingNumber: string
 ) {
   try {
-    return await resend.emails.send({
-      from: 'BY ARENA <noreply@byarena.com>',
+    const result = await sendEmail({
       to: customerEmail,
       subject: 'Tu pedido ha sido enviado',
       html: `
@@ -111,6 +116,12 @@ export async function sendShippingNotificationEmail(
         </div>
       `,
     });
+
+    if (!result.success) {
+      throw new Error(result.error || 'Error enviando email');
+    }
+
+    return { id: result.messageId };
   } catch (error) {
     console.error('Error sending shipping email:', error);
     throw error;
@@ -123,8 +134,7 @@ export async function sendReturnApprovedEmail(
   refundAmount: number
 ) {
   try {
-    return await resend.emails.send({
-      from: 'BY ARENA <noreply@byarena.com>',
+    const result = await sendEmail({
       to: customerEmail,
       subject: 'Tu devolución ha sido aprobada ✓',
       html: `
@@ -147,6 +157,12 @@ export async function sendReturnApprovedEmail(
         </div>
       `,
     });
+
+    if (!result.success) {
+      throw new Error(result.error || 'Error enviando email');
+    }
+
+    return { id: result.messageId };
   } catch (error) {
     console.error('Error sending return approved email:', error);
     throw error;

@@ -26,11 +26,29 @@ export default function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Evitar doble click
+    if (loading || added) return;
+    
+    // Validar stock
+    if (!inStock) {
+      console.warn('Producto sin stock:', product.name);
+      return;
+    }
+    
     setLoading(true);
     
     try {
       const cart = getCart();
       const existingIndex = cart.findIndex((item: any) => item.product_id === product.id);
+      
+      // Validar que no exceda stock disponible
+      const currentQtyInCart = existingIndex >= 0 ? cart[existingIndex].quantity : 0;
+      if (currentQtyInCart + quantity > product.stock) {
+        console.warn('Stock insuficiente. En carrito:', currentQtyInCart, 'Solicitado:', quantity, 'Stock:', product.stock);
+        setLoading(false);
+        return;
+      }
       
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += quantity;

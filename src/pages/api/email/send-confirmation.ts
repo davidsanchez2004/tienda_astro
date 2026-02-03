@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { sendEmail } from '../../../lib/gmail';
 import { generateOrderConfirmationHTML, generateOrderConfirmationPlainText } from '../../../lib/email-templates';
 
 interface SendEmailRequest {
@@ -19,15 +20,6 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Método no permitido' }), { status: 405 });
-    }
-
-    const apiKey = import.meta.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.error('RESEND_API_KEY no configurada');
-      return new Response(
-        JSON.stringify({ error: 'Email service no configurado' }),
-        { status: 500 }
-      );
     }
 
     const body: SendEmailRequest = await request.json();
@@ -60,37 +52,27 @@ export const POST: APIRoute = async ({ request }) => {
       checkoutType,
     });
 
-    // Usar Resend API
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        from: 'pedidos@byarena.com',
-        to: email,
-        subject: `Confirmación de tu Orden #${orderId} - BY ARENA`,
-        html: htmlContent,
-        text: plainTextContent,
-        reply_to: 'hola@byarena.com',
-      }),
+    // Usar Gmail via Nodemailer
+    const result = await sendEmail({
+      to: email,
+      subject: `Confirmación de tu Orden #${orderId} - BY ARENA`,
+      html: htmlContent,
+      text: plainTextContent,
+      replyTo: 'hola@byarena.com',
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error('Resend API error:', error);
+    if (!result.success) {
+      console.error('Gmail error:', result.error);
       return new Response(
         JSON.stringify({ error: 'No se pudo enviar el email' }),
         { status: 500 }
       );
     }
 
-    const result = await response.json();
     return new Response(
       JSON.stringify({ 
         success: true, 
-        messageId: result.id,
+        messageId: result.messageId,
         message: 'Email enviado correctamente'
       }),
       { status: 200 }

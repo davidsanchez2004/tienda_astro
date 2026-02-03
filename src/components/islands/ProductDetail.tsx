@@ -20,19 +20,38 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
 
   // Combine main image with additional images
   const allImages = [product.image_url, ...(product.images_urls || [])].filter(Boolean);
+  
+  const inStock = product.stock > 0;
+
+  // Calculate final price
+  const price = product.on_offer && product.offer_price 
+    ? product.offer_price 
+    : product.on_offer && product.offer_percentage 
+      ? product.price * (1 - product.offer_percentage / 100)
+      : product.price;
 
   const handleAddToCart = async () => {
+    // Evitar doble click
+    if (loading || added) return;
+    
+    // Validar stock
+    if (!inStock) {
+      console.warn('Producto sin stock');
+      return;
+    }
+    
     setLoading(true);
     try {
       const cart = getCart();
       const existingIndex = cart.findIndex((item: any) => item.product_id === product.id);
       
-      // Calculate price (considering offers)
-      const price = product.on_offer && product.offer_price 
-        ? product.offer_price 
-        : product.on_offer && product.offer_percentage 
-          ? product.price * (1 - product.offer_percentage / 100)
-          : product.price;
+      // Validar que no exceda stock disponible
+      const currentQtyInCart = existingIndex >= 0 ? cart[existingIndex].quantity : 0;
+      if (currentQtyInCart + quantity > product.stock) {
+        console.warn('Stock insuficiente');
+        setLoading(false);
+        return;
+      }
       
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += quantity;
@@ -57,9 +76,7 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
     }
   };
 
-  const inStock = product.stock > 0;
-
-  // Calculate final price
+  // Calculate display price for UI
   let finalPrice = product.price;
   let hasDiscount = false;
   

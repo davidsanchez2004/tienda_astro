@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { sendEmail as sendGmailEmail } from '../../../lib/gmail';
 import { 
   generateWelcomeEmailHTML, 
   generateShippingNotificationHTML, 
@@ -31,34 +32,21 @@ interface SendEmailRequest {
   returnNumber?: string;
 }
 
+// Función wrapper para usar Gmail via Nodemailer
 async function sendEmail(to: string, subject: string, html: string, text: string) {
-  const apiKey = import.meta.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY no configurada');
-  }
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      from: 'noreply@byarena.com',
-      to,
-      subject,
-      html,
-      text,
-      reply_to: 'hola@byarena.com',
-    }),
+  const result = await sendGmailEmail({
+    to,
+    subject,
+    html,
+    text,
+    replyTo: 'hola@byarena.com',
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Resend API error: ${JSON.stringify(error)}`);
+  
+  if (!result.success) {
+    throw new Error(result.error || 'Error al enviar email');
   }
-
-  return response.json();
+  
+  return { id: result.messageId };
 }
 
 export const POST: APIRoute = async ({ request }) => {

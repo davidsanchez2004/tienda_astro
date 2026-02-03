@@ -134,9 +134,8 @@ export default function CheckoutMode() {
         throw new Error(data.error || 'Error al procesar el pago');
       }
 
-      // Clear cart and redirect to Stripe Checkout
-      clearCart();
-      
+      // Redirigir a Stripe Checkout
+      // NOTA: NO vaciar carrito aquí - se vacía en checkout-exitoso.astro después de verificar pago
       if (data.url) {
         window.location.href = data.url;
       } else {

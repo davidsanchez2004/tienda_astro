@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
-import Stripe from 'stripe';
+import { stripe, STRIPE_WEBHOOK_SECRET } from '../../../lib/stripe';
+import type Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+// Usar el webhook secret exportado del módulo centralizado
+const webhookSecret = STRIPE_WEBHOOK_SECRET;
 
 // Tipos de eventos procesados
 type StripeEventType = 
@@ -268,6 +269,35 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
   }
 
   console.log(`Order ${orderId} marked as paid`);
+
+  // Decrementar stock de productos
+  try {
+    const { data: orderItems } = await supabaseAdminClient
+      .from('order_items')
+      .select('product_id, quantity')
+      .eq('order_id', orderId);
+
+    if (orderItems) {
+      for (const item of orderItems) {
+        const { data: product } = await supabaseAdminClient
+          .from('products')
+          .select('stock')
+          .eq('id', item.product_id)
+          .single();
+
+        if (product) {
+          await supabaseAdminClient
+            .from('products')
+            .update({ stock: Math.max(0, product.stock - item.quantity) })
+            .eq('id', item.product_id);
+          console.log(`Stock decremented for product ${item.product_id}: -${item.quantity}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error decrementing stock:', err);
+    // No lanzar error - el pago ya fue procesado
+  }
 
   // Enviar email (non-blocking)
   try {

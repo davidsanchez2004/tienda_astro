@@ -1,66 +1,129 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { supabaseAdminClient } from '../lib/supabase';
+import { stripe, isStripeConfigured } from '../lib/stripe';
 
 const { searchParams } = new URL(Astro.request.url);
 const sessionId = searchParams.get('session_id');
-const orderId = searchParams.get('order_id');
-const email = searchParams.get('email');
+const orderId = searchParams.get('order');
+
+let paymentVerified = false;
+let orderData = null;
+let error = null;
+
+// Verificar el pago real con Stripe
+if (sessionId && isStripeConfigured()) {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    
+    if (session.payment_status === 'paid') {
+      paymentVerified = true;
+      
+      // Actualizar orden como pagada si existe
+      if (orderId) {
+        const { data, error: updateError } = await supabaseAdminClient
+          .from('orders')
+          .update({ 
+            status: 'paid', 
+            payment_status: 'paid',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId)
+          .select()
+          .single();
+        
+        if (!updateError && data) {
+          orderData = data;
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Error verifying payment:', e);
+    error = 'Error al verificar el pago';
+  }
+} else if (orderId) {
+  // Fallback: verificar en la base de datos si ya está marcado como pagado
+  const { data } = await supabaseAdminClient
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+  
+  if (data?.status === 'paid' || data?.payment_status === 'paid') {
+    paymentVerified = true;
+    orderData = data;
+  }
+}
 ---
 
 <BaseLayout title="Compra Exitosa | BY ARENA" description="Tu pedido ha sido procesado correctamente">
   <div class="min-h-screen bg-gradient-to-br from-green-50 via-cream to-arena-pale flex items-center justify-center px-4 py-12">
     <div class="max-w-2xl w-full bg-white rounded-lg border border-green-200 shadow-lg p-8 md:p-12 text-center">
-      {/* Success Icon */}
-      <div class="mb-8 flex justify-center">
-        <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
-          <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-          </svg>
-        </div>
-      </div>
+      
+      {paymentVerified ? (
+        <>
+          {/* Success Icon */}
+          <div class="mb-8 flex justify-center">
+            <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center">
+              <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+          </div>
 
-      {/* Title */}
-      <h1 class="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-4">
-        ¡Compra Exitosa!
-      </h1>
+          {/* Title */}
+          <h1 class="text-4xl md:text-5xl font-serif font-bold text-gray-900 mb-4">
+            ¡Compra Exitosa!
+          </h1>
 
-      {/* Message */}
-      <p class="text-xl text-gray-600 mb-8">
-        Gracias por tu compra. Tu pedido ha sido procesado correctamente.
-      </p>
-
-      {/* Order Details */}
-      <div class="bg-arena-pale rounded-lg p-6 mb-8 text-left">
-        <h3 class="font-semibold text-gray-900 mb-4">Detalles del Pedido</h3>
-        <div class="space-y-2 text-gray-700">
-          {orderId && (
-            <p>
-              <strong>Número de Orden:</strong> {orderId}
-            </p>
-          )}
-          {sessionId && (
-            <p>
-              <strong>ID de Sesión Stripe:</strong> {sessionId}
-            </p>
-          )}
-          {email && (
-            <p>
-              <strong>Email de Confirmación:</strong> {email}
-            </p>
-          )}
-          <p>
-            <strong>Estado:</strong> <span class="text-green-600 font-semibold">Pagado</span>
+          {/* Message */}
+          <p class="text-xl text-gray-600 mb-8">
+            Gracias por tu compra. Tu pedido ha sido procesado correctamente.
           </p>
-          <p>
-            <strong>Próximo paso:</strong> Recibirás un email con los detalles de tu envío
+
+          {/* Order Details */}
+          <div class="bg-arena-pale rounded-lg p-6 mb-8 text-left">
+            <h3 class="font-semibold text-gray-900 mb-4">Detalles del Pedido</h3>
+            <div class="space-y-2 text-gray-700">
+              {orderId && (
+                <p>
+                  <strong>Número de Orden:</strong> <span class="font-mono">{orderId.slice(0, 8)}...</span>
+                </p>
+              )}
+              <p>
+                <strong>Estado:</strong> <span class="text-green-600 font-semibold">Pagado ✓</span>
+              </p>
+              <p>
+                <strong>Próximo paso:</strong> Recibirás un email con los detalles de tu envío
+              </p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Pending/Error Icon */}
+          <div class="mb-8 flex justify-center">
+            <div class="w-20 h-20 rounded-full bg-yellow-100 flex items-center justify-center">
+              <svg class="w-10 h-10 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+
+          <h1 class="text-3xl font-serif font-bold text-gray-900 mb-4">
+            Verificando Pago...
+          </h1>
+
+          <p class="text-gray-600 mb-8">
+            {error || 'No pudimos verificar el estado del pago. Si realizaste el pago, recibirás un email de confirmación en breve.'}
           </p>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Actions */}
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
         <a
-          href="/cuenta"
+          href="/mis-pedidos"
           class="px-8 py-3 bg-arena text-white font-semibold rounded-lg hover:bg-arena-light transition-colors text-center"
         >
           Ver Mis Pedidos
@@ -83,3 +146,9 @@ const email = searchParams.get('email');
     </div>
   </div>
 </BaseLayout>
+
+<script>
+  // Limpiar carrito al llegar a esta página
+  import { clearCart } from '../stores/useCart';
+  clearCart();
+</script>
