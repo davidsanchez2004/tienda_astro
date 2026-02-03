@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabaseClient } from '../lib/supabase';
-import { handleSessionChange } from '../stores/useCart';
+import { onUserLogin, onUserLogout } from '../stores/useCart';
 
 interface AuthContextType {
   user: any | null;
@@ -15,33 +15,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check current session
+    // Check current session on mount
     supabaseClient.auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
-      // Sincronizar carrito con el usuario actual
-      handleSessionChange(currentUser?.id || null);
+      
+      // Sincronizar carrito con la sesión inicial
+      if (currentUser?.id) {
+        onUserLogin(currentUser.id);
+      }
+      // Si no hay usuario, no hacemos nada (ya está en modo guest)
+      
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (login/logout)
     const {
       data: { subscription },
-    } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    } = supabaseClient.auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user || null;
       setUser(currentUser);
-      // Sincronizar carrito cuando cambia la sesión (login/logout)
-      handleSessionChange(currentUser?.id || null);
+      
+      console.log('[Auth] State change:', event, currentUser?.id);
+      
+      // Manejar el carrito según el evento
+      if (event === 'SIGNED_IN' && currentUser?.id) {
+        onUserLogin(currentUser.id);
+      } else if (event === 'SIGNED_OUT') {
+        onUserLogout();
+      }
     });
 
     return () => subscription?.unsubscribe();
   }, []);
 
   const logout = async () => {
+    // Primero limpiar el carrito del usuario
+    onUserLogout();
+    // Luego cerrar sesión en Supabase
     await supabaseClient.auth.signOut();
     setUser(null);
-    // Limpiar el usuario del carrito al cerrar sesión
-    handleSessionChange(null);
   };
 
   return (
@@ -54,7 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = React.useContext(AuthContext);
   if (context === undefined) {
-    // Return a no-op auth object to prevent crashes in SSR
     console.warn('useAuth called outside AuthProvider, returning empty auth');
     return {
       user: null,
