@@ -180,7 +180,7 @@ const getPageUrl = (page: number) => buildUrl({ categoria: categorySlug, precio_
             {priceMax && (
               <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                 Hasta {priceMax}€
-                <a href={buildUrl({ categoria: categorySlug, precio_max: null, pagina: 1 })} class="ml-1 hover:text-amber-600">✕</a>
+                <a href={buildUrl({ categoria: categorySlug, precio_max: null, pagina: 1 })} class="ml-1 hover:text-amber-600">x</a>
               </span>
             )}
             {selectedCategory && (

@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { supabaseAdminClient } from '../lib/supabase';
 import ProductCarousel from '../components/islands/ProductCarousel';
 import NewsletterForm from '../components/islands/NewsletterForm';
+import NewsletterPopup from '../components/islands/NewsletterPopup';
 
 // Fetch all active products for carousel (usando admin client para evitar RLS)
 const { data: allProducts } = await supabaseAdminClient
@@ -263,4 +264,7 @@ const categoryIcons: Record<string, string> = {
       </p>
     </div>
   </section>
+
+  {/* Newsletter Popup */}
+  <NewsletterPopup client:load />
 </BaseLayout>

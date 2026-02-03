@@ -180,7 +180,7 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 bg-[#D4C5B9] text-white rounded-lg hover:bg-[#8B7355] transition-colors flex items-center gap-2"
         >
-          {showForm ? '✕ Cerrar' : '+ Nuevo Código'}
+          {showForm ? 'Cerrar' : '+ Nuevo Codigo'}
         </button>
       </div>
 
@@ -221,9 +221,9 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
                     type="button"
                     onClick={generateCode}
                     className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
-                    title="Generar código aleatorio"
+                    title="Generar codigo aleatorio"
                   >
-                    🎲
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                   </button>
                 </div>
               </div>
@@ -327,7 +327,7 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
             {/* Personalización */}
             <div className="border-t border-gray-100 pt-4">
               <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                <span>📧</span> Enviar por Email (opcional)
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Enviar por Email (opcional)
               </h4>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -401,12 +401,12 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
               >
                 {submitting ? (
                   <>
-                    <span className="animate-spin">⏳</span>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
                     Creando...
                   </>
                 ) : (
                   <>
-                    {formData.sendEmail && formData.targetEmail ? '📧 Crear y Enviar' : '✓ Crear Código'}
+                    {formData.sendEmail && formData.targetEmail ? 'Crear y Enviar' : 'Crear Codigo'}
                   </>
                 )}
               </button>
@@ -476,7 +476,7 @@ export default function DiscountCodeManager({ adminKey }: DiscountManagerProps) 
                             {code.target_email}
                           </span>
                           {code.sent_at && (
-                            <span className="text-green-500" title="Email enviado">✓</span>
+                            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                           )}
                         </div>
                       ) : (

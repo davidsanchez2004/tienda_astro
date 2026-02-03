@@ -72,19 +72,19 @@ export default function OrderTracking() {
   const getStatusIcon = (status: string): string => {
     switch (status) {
       case 'pending_payment':
-        return '⏳';
+        return 'P';
       case 'paid':
-        return '✓';
+        return 'OK';
       case 'processing':
-        return '◆';
+        return 'PR';
       case 'shipped':
-        return '→';
+        return 'EN';
       case 'delivered':
-        return '✓';
+        return 'OK';
       case 'cancelled':
-        return '✗';
+        return 'X';
       default:
-        return '•';
+        return '-';
     }
   };
 
@@ -188,7 +188,7 @@ export default function OrderTracking() {
             </form>
 
             <p className="text-xs text-gray-500 text-center mt-6">
-              🔒 Tu información es privada y segura. Solo necesitamos tu email y número de orden.
+              Tu informacion es privada y segura. Solo necesitamos tu email y numero de orden.
             </p>
           </div>
         )}
@@ -222,12 +222,12 @@ export default function OrderTracking() {
                 <div className="space-y-4">
                   <div className="flex items-start">
                     <div className="flex flex-col items-center mr-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${       
                         ['pending_payment', 'paid', 'processing', 'shipped', 'delivered'].includes(order.status)
                           ? 'bg-green-100 text-green-600'
                           : 'bg-gray-200 text-gray-400'
                       }`}>
-                        ✓
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                       </div>
                       <div className="w-0.5 h-12 bg-gray-300 my-2"></div>
                     </div>
@@ -267,7 +267,7 @@ export default function OrderTracking() {
                           ? 'bg-indigo-100 text-indigo-600'
                           : 'bg-gray-200 text-gray-400'
                       }`}>
-                        🚚
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
                       </div>
                       <div className="w-0.5 h-12 bg-gray-300 my-2"></div>
                     </div>
@@ -300,7 +300,7 @@ export default function OrderTracking() {
                           ? 'bg-green-100 text-green-600'
                           : 'bg-gray-200 text-gray-400'
                       }`}>
-                        ✅
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                       </div>
                     </div>
                     <div>

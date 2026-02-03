@@ -52,7 +52,7 @@ const ADMIN_EMAIL = getEnvVar('ADMIN_EMAIL', 'admin@byarena.com');
 const SITE_NAME = 'BY ARENA';
 
 // Debug: Log de configuración (solo en desarrollo)
-console.log('📧 Email Config:', {
+console.log('[EMAIL] Config:', {
   user: GMAIL_USER ? `${GMAIL_USER.slice(0, 5)}***` : 'NO CONFIGURADO',
   passwordSet: !!GMAIL_PASSWORD,
 });
@@ -74,7 +74,7 @@ function validateConfig(): { valid: boolean; error?: string } {
   // App Password tiene 16 caracteres (4 grupos de 4 con espacios)
   const cleanPassword = GMAIL_PASSWORD.replace(/\s/g, '');
   if (cleanPassword.length !== 16) {
-    console.warn('⚠️ GMAIL_PASSWORD no parece ser una App Password válida (debe tener 16 caracteres)');
+    console.warn('[WARN] GMAIL_PASSWORD no parece ser una App Password valida (debe tener 16 caracteres)');
   }
   return { valid: true };
 }
@@ -129,18 +129,18 @@ export async function verifyEmailConnection(): Promise<{ success: boolean; error
   try {
     const transport = getTransporter();
     await transport.verify();
-    console.log('✅ Conexión con Gmail verificada correctamente');
+    console.log('[OK] Conexion con Gmail verificada correctamente');
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-    console.error('❌ Error verificando conexión con Gmail:', errorMessage);
+    console.error('[ERROR] Error verificando conexion con Gmail:', errorMessage);
     
     // Errores comunes y soluciones
     if (errorMessage.includes('535')) {
-      console.error('💡 Solución: Verifica que estás usando una App Password, no tu contraseña normal');
+      console.error('[TIP] Solucion: Verifica que estas usando una App Password, no tu contrasena normal');
     }
     if (errorMessage.includes('Invalid login')) {
-      console.error('💡 Solución: Activa la verificación en 2 pasos y genera una App Password');
+      console.error('[TIP] Solucion: Activa la verificacion en 2 pasos y genera una App Password');
     }
     
     return { success: false, error: errorMessage };
@@ -209,8 +209,8 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     const result = await transport.sendMail(mailOptions);
     
     const duration = Date.now() - startTime;
-    console.log(`✅ Email enviado en ${duration}ms a: ${options.to}`);
-    console.log(`   📧 MessageId: ${result.messageId}`);
+    console.log(`[OK] Email enviado en ${duration}ms a: ${options.to}`);
+    console.log(`   MessageId: ${result.messageId}`);
 
     return {
       success: true,
@@ -220,7 +220,7 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
     const duration = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     
-    console.error(`❌ Error enviando email después de ${duration}ms:`, errorMessage);
+    console.error(`[ERROR] Error enviando email despues de ${duration}ms:`, errorMessage);
     
     // Analizar el error para dar más contexto
     let details = '';
@@ -289,7 +289,7 @@ export async function sendTestEmail(to?: string): Promise<EmailResult> {
     subject: `[TEST] Prueba de email desde ${SITE_NAME}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #D4C5B9;">✅ Email de Prueba</h1>
+        <h1 style="color: #D4C5B9;">Email de Prueba</h1>
         <p>Este es un email de prueba enviado desde <strong>${SITE_NAME}</strong>.</p>
         <p>Si estás viendo esto, la configuración de email está funcionando correctamente.</p>
         <hr style="border: 1px solid #E8DCCF; margin: 20px 0;">

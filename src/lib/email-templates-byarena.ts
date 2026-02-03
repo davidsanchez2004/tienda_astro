@@ -349,8 +349,8 @@ function getFooter(): string {
       <div class="footer-logo">BY ARENA</div>
       
       <div class="social-links">
-        <a href="https://instagram.com/byarena" class="social-link">📸 Instagram</a>
-        <a href="https://tiktok.com/@byarena" class="social-link">🎵 TikTok</a>
+        <a href="https://instagram.com/byarena" class="social-link">Instagram</a>
+        <a href="https://tiktok.com/@byarena" class="social-link">TikTok</a>
       </div>
       
       <div class="footer-links">
@@ -431,7 +431,7 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
   `).join('');
 
   const shippingAddressHTML = data.shippingMethod === 'pickup' 
-    ? `<p><strong>📍 Recogida en tienda:</strong> Punto de recogida BY ARENA</p>`
+    ? `<p><strong>Recogida en tienda:</strong> Punto de recogida BY ARENA</p>`
     : `
       <p>${data.shippingAddress.street || ''}</p>
       <p>${data.shippingAddress.postalCode || ''} ${data.shippingAddress.city || ''}</p>
@@ -442,18 +442,18 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
     ${getHeader()}
     
     <div class="content">
-      <h2 class="greeting">¡Gracias por tu pedido, ${data.customerName}! 🎉</h2>
+      <h2 class="greeting">Gracias por tu pedido, ${data.customerName}!</h2>
       
       <p>Tu pedido ha sido confirmado y estamos preparándolo con mucho cariño.</p>
       
       <div class="highlight-box">
         <p style="margin: 0 0 5px 0; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Número de pedido</p>
         <p class="order-number">#${data.orderNumber}</p>
-        <span class="status-badge status-paid">✓ Pago confirmado</span>
+        <span class="status-badge status-paid">Pago confirmado</span>
       </div>
       
       <h3 style="color: ${BRAND_COLORS.secondary}; font-family: 'Playfair Display', serif; margin-top: 30px;">
-        📦 Artículos de tu pedido
+        Articulos de tu pedido
       </h3>
       
       <table class="items-table">
@@ -494,7 +494,7 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
       <div class="divider"></div>
       
       <h3 style="color: ${BRAND_COLORS.secondary}; font-family: 'Playfair Display', serif;">
-        🚚 Dirección de envío
+        Direccion de envio
       </h3>
       
       <div style="background: ${BRAND_COLORS.lightGray}; padding: 20px; border-radius: 8px;">
@@ -509,7 +509,7 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
       
       <div style="background: #E8F5E9; border-radius: 8px; padding: 20px; margin: 15px 0;">
         <p style="margin: 0;">
-          <strong>1.</strong> Estamos preparando tu pedido 📦<br>
+          <strong>1.</strong> Estamos preparando tu pedido<br>
           <strong>2.</strong> Recibirás un email cuando sea enviado<br>
           <strong>3.</strong> Podrás rastrear tu paquete en todo momento
         </p>
@@ -521,7 +521,7 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
       
       <div style="text-align: center; margin-top: 20px;">
         <div class="whatsapp-box">
-          📱 ¿Dudas? <a href="https://wa.me/${WHATSAPP_NUMBER}">Escríbenos por WhatsApp</a>
+          Dudas? <a href="https://wa.me/${WHATSAPP_NUMBER}">Escribenos por WhatsApp</a>
         </div>
       </div>
     </div>
@@ -529,7 +529,7 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
     ${getFooter()}
   `;
 
-  return getBaseTemplate(content, `¡Tu pedido #${data.orderNumber} ha sido confirmado!`);
+  return getBaseTemplate(content, `Tu pedido #${data.orderNumber} ha sido confirmado!`);
 }
 
 /**
@@ -552,7 +552,7 @@ export function generateOrderNotificationAdmin(data: OrderEmailData): string {
     ${getHeader()}
     
     <div class="content">
-      <h2 class="greeting">🛒 Nuevo Pedido Recibido</h2>
+      <h2 class="greeting">Nuevo Pedido Recibido</h2>
       
       <div class="highlight-box" style="background: #E3F2FD; border-left-color: #1976D2;">
         <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">PEDIDO</p>
@@ -560,7 +560,7 @@ export function generateOrderNotificationAdmin(data: OrderEmailData): string {
         <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold;">€${data.total.toFixed(2)}</p>
       </div>
       
-      <h3 style="color: ${BRAND_COLORS.secondary};">👤 Datos del Cliente</h3>
+      <h3 style="color: ${BRAND_COLORS.secondary};">Datos del Cliente</h3>
       
       <div class="info-grid">
         <div class="info-item">
@@ -581,7 +581,7 @@ export function generateOrderNotificationAdmin(data: OrderEmailData): string {
         </div>
       </div>
       
-      <h3 style="color: ${BRAND_COLORS.secondary}; margin-top: 30px;">📦 Productos</h3>
+      <h3 style="color: ${BRAND_COLORS.secondary}; margin-top: 30px;">Productos</h3>
       
       <table class="items-table">
         <thead>
@@ -624,7 +624,7 @@ export function generateOrderNotificationAdmin(data: OrderEmailData): string {
     </div>
   `;
 
-  return getBaseTemplate(content, `🛒 Nuevo pedido #${data.orderNumber} - €${data.total.toFixed(2)}`);
+  return getBaseTemplate(content, `[Nuevo Pedido] #${data.orderNumber} - ${data.total.toFixed(2)} EUR`);
 }
 
 /**
@@ -635,7 +635,7 @@ export function generateShippingNotificationCustomer(data: OrderEmailData): stri
     ${getHeader()}
     
     <div class="content">
-      <h2 class="greeting">🚚 ¡Tu pedido está en camino!</h2>
+      <h2 class="greeting">Tu pedido esta en camino!</h2>
       
       <p>Hola ${data.customerName},</p>
       <p>¡Buenas noticias! Tu pedido ha sido enviado y pronto estará contigo.</p>
@@ -643,7 +643,7 @@ export function generateShippingNotificationCustomer(data: OrderEmailData): stri
       <div class="highlight-box">
         <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">Número de pedido</p>
         <p class="order-number">#${data.orderNumber}</p>
-        <span class="status-badge status-shipped">📦 Enviado</span>
+        <span class="status-badge status-shipped">Enviado</span>
       </div>
       
       ${data.trackingNumber ? `
@@ -666,12 +666,12 @@ export function generateShippingNotificationCustomer(data: OrderEmailData): stri
       <div class="divider"></div>
       
       <h3 style="color: ${BRAND_COLORS.secondary}; font-family: 'Playfair Display', serif;">
-        📍 Dirección de entrega
+        Direccion de entrega
       </h3>
       
       <div style="background: ${BRAND_COLORS.lightGray}; padding: 20px; border-radius: 8px;">
         ${data.shippingMethod === 'pickup' 
-          ? `<p><strong>📍 Recogida en tienda:</strong> Punto de recogida BY ARENA</p>`
+          ? `<p><strong>Recogida en tienda:</strong> Punto de recogida BY ARENA</p>`
           : `
             <p>${data.shippingAddress.street || ''}</p>
             <p>${data.shippingAddress.postalCode || ''} ${data.shippingAddress.city || ''}</p>
@@ -681,7 +681,7 @@ export function generateShippingNotificationCustomer(data: OrderEmailData): stri
       
       <div style="background: #FFF8E1; border-radius: 8px; padding: 20px; margin: 25px 0;">
         <p style="margin: 0;">
-          <strong>💡 Consejo:</strong> Asegúrate de tener a alguien disponible para recibir el paquete. 
+          <strong>Consejo:</strong> Asegurate de tener a alguien disponible para recibir el paquete. 
           Si no hay nadie, el repartidor dejará un aviso.
         </p>
       </div>
@@ -690,7 +690,7 @@ export function generateShippingNotificationCustomer(data: OrderEmailData): stri
     ${getFooter()}
   `;
 
-  return getBaseTemplate(content, `🚚 Tu pedido #${data.orderNumber} ha sido enviado`);
+  return getBaseTemplate(content, `Tu pedido #${data.orderNumber} ha sido enviado`);
 }
 
 /**
@@ -702,15 +702,14 @@ export function generateDeliveryConfirmationCustomer(data: OrderEmailData): stri
     
     <div class="content">
       <div style="text-align: center; padding: 20px 0;">
-        <span style="font-size: 64px;">🎉</span>
-        <h2 class="greeting" style="margin-top: 15px;">¡Tu pedido ha llegado!</h2>
+        <h2 class="greeting" style="margin-top: 15px;">Tu pedido ha llegado!</h2>
       </div>
       
       <p>Hola ${data.customerName},</p>
       <p>Tu pedido <strong>#${data.orderNumber}</strong> ha sido entregado con éxito.</p>
       
       <div class="highlight-box" style="background: linear-gradient(135deg, ${BRAND_COLORS.accent}20, ${BRAND_COLORS.primary}30); border-left-color: ${BRAND_COLORS.accent};">
-        <span class="status-badge status-delivered">✓ Entregado</span>
+        <span class="status-badge status-delivered">Entregado</span>
         <p style="margin-top: 15px;">¡Esperamos que disfrutes de tus nuevos artículos!</p>
       </div>
       
@@ -739,14 +738,14 @@ export function generateDeliveryConfirmationCustomer(data: OrderEmailData): stri
       </div>
       
       <div style="text-align: center; margin-top: 30px;">
-        <p style="color: ${BRAND_COLORS.secondary}; font-weight: 600;">¡Gracias por confiar en BY ARENA! 💝</p>
+        <p style="color: ${BRAND_COLORS.secondary}; font-weight: 600;">Gracias por confiar en BY ARENA!</p>
       </div>
     </div>
     
     ${getFooter()}
   `;
 
-  return getBaseTemplate(content, `🎉 ¡Tu pedido #${data.orderNumber} ha sido entregado!`);
+  return getBaseTemplate(content, `Tu pedido #${data.orderNumber} ha sido entregado`);
 }
 
 /**
@@ -757,7 +756,7 @@ export function generateDeliveryNotificationAdmin(data: OrderEmailData): string 
     ${getHeader()}
     
     <div class="content">
-      <h2 class="greeting">✅ Pedido Entregado</h2>
+      <h2 class="greeting">[Completado] Pedido Entregado</h2>
       
       <div class="highlight-box" style="background: #E8F5E9; border-left-color: #4CAF50;">
         <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">PEDIDO COMPLETADO</p>
@@ -779,7 +778,7 @@ export function generateDeliveryNotificationAdmin(data: OrderEmailData): string 
         </div>
         <div class="info-item">
           <span class="info-label">Estado:</span>
-          <span class="info-value" style="color: #2E7D32;">✓ Entregado</span>
+          <span class="info-value" style="color: #2E7D32;">Entregado</span>
         </div>
       </div>
       
@@ -795,7 +794,7 @@ export function generateDeliveryNotificationAdmin(data: OrderEmailData): string 
     </div>
   `;
 
-  return getBaseTemplate(content, `✅ Pedido #${data.orderNumber} entregado`);
+  return getBaseTemplate(content, `[Entregado] Pedido #${data.orderNumber}`);
 }
 
 // =====================================================
@@ -823,15 +822,15 @@ export function generateReturnRequestAdmin(data: ReturnEmailData): string {
     ${getHeader()}
     
     <div class="content">
-      <h2 class="greeting" style="color: #C2185B;">🔄 Nueva Solicitud de Devolución</h2>
+      <h2 class="greeting" style="color: #C2185B;">Nueva Solicitud de Devolucion</h2>
       
       <div class="highlight-box" style="background: #FCE4EC; border-left-color: #C2185B;">
-        <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">DEVOLUCIÓN</p>
+        <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">DEVOLUCION</p>
         <p class="order-number" style="color: #C2185B;">#${data.returnNumber}</p>
-        <span class="status-badge status-return">⏳ Pendiente de revisión</span>
+        <span class="status-badge status-return">Pendiente de revision</span>
       </div>
       
-      <h3 style="color: ${BRAND_COLORS.secondary};">📋 Detalles de la Solicitud</h3>
+      <h3 style="color: ${BRAND_COLORS.secondary};">Detalles de la Solicitud</h3>
       
       <div class="info-grid">
         <div class="info-item">
@@ -858,7 +857,7 @@ export function generateReturnRequestAdmin(data: ReturnEmailData): string {
       
       <div class="divider"></div>
       
-      <h3 style="color: ${BRAND_COLORS.secondary};">❓ Motivo de la Devolución</h3>
+      <h3 style="color: ${BRAND_COLORS.secondary};">Motivo de la Devolucion</h3>
       
       <div style="background: #FFF3E0; padding: 20px; border-radius: 8px; border-left: 4px solid #FF9800;">
         <p style="margin: 0; font-weight: 600; color: #E65100;">${data.reason}</p>
@@ -873,7 +872,7 @@ export function generateReturnRequestAdmin(data: ReturnEmailData): string {
       
       <div style="background: #FFEBEE; border-radius: 8px; padding: 15px; margin-top: 25px;">
         <p style="margin: 0; font-size: 13px; color: #C62828;">
-          <strong>⚠️ Acción requerida:</strong> Por favor, revisa esta solicitud y responde al cliente lo antes posible.
+          <strong>Accion requerida:</strong> Por favor, revisa esta solicitud y responde al cliente lo antes posible.
         </p>
       </div>
     </div>
@@ -883,7 +882,7 @@ export function generateReturnRequestAdmin(data: ReturnEmailData): string {
     </div>
   `;
 
-  return getBaseTemplate(content, `🔄 Nueva devolución #${data.returnNumber} - €${data.refundAmount.toFixed(2)}`);
+  return getBaseTemplate(content, `Nueva devolucion #${data.returnNumber} - EUR${data.refundAmount.toFixed(2)}`);
 }
 
 /**
@@ -894,7 +893,7 @@ export function generateReturnConfirmationCustomer(data: ReturnEmailData): strin
     ${getHeader()}
     
     <div class="content">
-      <h2 class="greeting">🔄 Solicitud de Devolución Recibida</h2>
+      <h2 class="greeting">Solicitud de Devolucion Recibida</h2>
       
       <p>Hola ${data.customerName},</p>
       <p>Hemos recibido tu solicitud de devolución y la estamos revisando.</p>
@@ -902,7 +901,7 @@ export function generateReturnConfirmationCustomer(data: ReturnEmailData): strin
       <div class="highlight-box">
         <p style="margin: 0 0 5px 0; color: #666; font-size: 12px;">Número de devolución</p>
         <p class="order-number">#${data.returnNumber}</p>
-        <span class="status-badge status-pending">⏳ En revisión</span>
+        <span class="status-badge status-pending">En revision</span>
       </div>
       
       <div class="info-grid">
@@ -942,7 +941,7 @@ export function generateReturnConfirmationCustomer(data: ReturnEmailData): strin
       
       <div style="text-align: center; margin-top: 20px;">
         <div class="whatsapp-box">
-          📱 ¿Dudas? <a href="https://wa.me/${WHATSAPP_NUMBER}">Escríbenos por WhatsApp</a>
+          Dudas? <a href="https://wa.me/${WHATSAPP_NUMBER}">Escribenos por WhatsApp</a>
         </div>
       </div>
     </div>
@@ -950,7 +949,7 @@ export function generateReturnConfirmationCustomer(data: ReturnEmailData): strin
     ${getFooter()}
   `;
 
-  return getBaseTemplate(content, `🔄 Devolución #${data.returnNumber} recibida`);
+  return getBaseTemplate(content, `Devolucion #${data.returnNumber} recibida`);
 }
 
 // =====================================================
@@ -981,8 +980,7 @@ export function generateDiscountCodeEmail(data: DiscountCodeEmailData): string {
     
     <div class="content">
       <div style="text-align: center;">
-        <span style="font-size: 48px;">🎁</span>
-        <h2 class="greeting" style="margin-top: 15px;">¡Tienes un regalo especial!</h2>
+        <h2 class="greeting" style="margin-top: 15px;">Tienes un regalo especial!</h2>
       </div>
       
       <p style="text-align: center;">Hola ${data.customerName},</p>
@@ -1013,7 +1011,7 @@ export function generateDiscountCodeEmail(data: DiscountCodeEmailData): string {
       ${data.expirationDate ? `
         <div style="text-align: center; background: #FFF3E0; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 0; color: #E65100;">
-            <strong>⏰ Válido hasta:</strong> ${data.expirationDate}
+            <strong>Valido hasta:</strong> ${data.expirationDate}
           </p>
         </div>
       ` : ''}
@@ -1032,9 +1030,9 @@ export function generateDiscountCodeEmail(data: DiscountCodeEmailData): string {
       
       <div style="background: ${BRAND_COLORS.lightGray}; padding: 20px; border-radius: 8px;">
         <p style="margin: 0;">
-          <strong>1.</strong> Añade tus productos favoritos al carrito 🛒<br>
-          <strong>2.</strong> En el checkout, introduce tu código <strong>${data.code}</strong><br>
-          <strong>3.</strong> ¡Disfruta de tu descuento! 🎉
+          <strong>1.</strong> Anade tus productos favoritos al carrito<br>
+          <strong>2.</strong> En el checkout, introduce tu codigo <strong>${data.code}</strong><br>
+          <strong>3.</strong> Disfruta de tu descuento!
         </p>
       </div>
     </div>
@@ -1042,7 +1040,7 @@ export function generateDiscountCodeEmail(data: DiscountCodeEmailData): string {
     ${getFooter()}
   `;
 
-  return getBaseTemplate(content, `🎁 ¡${discountDisplay} de descuento para ti!`);
+  return getBaseTemplate(content, `${discountDisplay} de descuento para ti`);
 }
 
 /**
@@ -1055,7 +1053,6 @@ export function generateNewsletterWelcome(data: { confirmUrl: string }): { subje
     <div class="content">
       <div style="text-align: center; padding: 20px 0;">
         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, ${BRAND_COLORS.accent} 0%, ${BRAND_COLORS.secondary} 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-          <span style="font-size: 36px;">💌</span>
         </div>
       </div>
       
@@ -1070,23 +1067,23 @@ export function generateNewsletterWelcome(data: { confirmUrl: string }): { subje
       <div style="background: ${BRAND_COLORS.lightGray}; padding: 25px; border-radius: 12px; margin: 25px 0;">
         <ul style="margin: 0; padding-left: 20px; color: ${BRAND_COLORS.text};">
           <li style="margin-bottom: 12px;">
-            <strong>🎁 10% de descuento</strong> en tu primera compra
+            <strong>10% de descuento</strong> en tu primera compra
           </li>
           <li style="margin-bottom: 12px;">
-            <strong>✨ Acceso anticipado</strong> a nuevas colecciones
+            <strong>Acceso anticipado</strong> a nuevas colecciones
           </li>
           <li style="margin-bottom: 12px;">
-            <strong>🏷️ Ofertas exclusivas</strong> solo para suscriptores
+            <strong>Ofertas exclusivas</strong> solo para suscriptores
           </li>
           <li style="margin-bottom: 0;">
-            <strong>💡 Consejos de estilo</strong> y tendencias
+            <strong>Consejos de estilo</strong> y tendencias
           </li>
         </ul>
       </div>
       
       <div style="text-align: center; margin: 30px 0;">
         <a href="${data.confirmUrl}" class="cta-button" style="font-size: 18px; padding: 18px 40px;">
-          ✓ Confirmar mi suscripción
+          Confirmar mi suscripcion
         </a>
       </div>
       
@@ -1099,7 +1096,7 @@ export function generateNewsletterWelcome(data: { confirmUrl: string }): { subje
   `;
 
   return {
-    subject: '💌 Confirma tu suscripción a BY ARENA',
+    subject: 'Confirma tu suscripcion a BY ARENA',
     html: getBaseTemplate(content, '¡Confirma tu suscripción y obtén un 10% de descuento!')
   };
 }
@@ -1114,12 +1111,11 @@ export function generateNewsletterConfirmed(data: { discountCode: string }): { s
     <div class="content">
       <div style="text-align: center; padding: 20px 0;">
         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, ${BRAND_COLORS.accent} 0%, ${BRAND_COLORS.secondary} 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-          <span style="font-size: 36px;">🎉</span>
         </div>
       </div>
       
       <h1 style="color: ${BRAND_COLORS.secondary}; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; text-align: center; margin: 0 0 20px 0;">
-        ¡Bienvenido/a a BY ARENA!
+        Bienvenido/a a BY ARENA!
       </h1>
       
       <p style="text-align: center; font-size: 16px; color: ${BRAND_COLORS.text};">
@@ -1164,7 +1160,7 @@ export function generateNewsletterConfirmed(data: { discountCode: string }): { s
   `;
 
   return {
-    subject: '🎁 ¡Tu 10% de descuento está listo! - BY ARENA',
+    subject: 'Tu 10% de descuento esta listo - BY ARENA',
     html: getBaseTemplate(content, '¡Gracias por suscribirte! Aquí tienes tu descuento.')
   };
 }
@@ -1179,12 +1175,11 @@ export function generateWelcomeEmail(data: { name: string }): { subject: string;
     <div class="content">
       <div style="text-align: center; padding: 20px 0;">
         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, ${BRAND_COLORS.accent} 0%, ${BRAND_COLORS.secondary} 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-          <span style="font-size: 36px;">🎉</span>
         </div>
       </div>
       
       <h1 style="color: ${BRAND_COLORS.secondary}; font-family: 'Playfair Display', Georgia, serif; font-size: 28px; text-align: center; margin: 0 0 20px 0;">
-        ¡Bienvenida a BY ARENA, ${data.name}!
+        Bienvenida a BY ARENA, ${data.name}!
       </h1>
       
       <p style="text-align: center; font-size: 16px; color: ${BRAND_COLORS.text};">
@@ -1196,10 +1191,10 @@ export function generateWelcomeEmail(data: { name: string }): { subject: string;
           Con tu cuenta puedes:
         </h3>
         <ul style="margin: 0; padding-left: 20px; color: ${BRAND_COLORS.text};">
-          <li style="margin-bottom: 10px;">Guardar tus productos favoritos ❤️</li>
-          <li style="margin-bottom: 10px;">Ver el historial de tus pedidos 📦</li>
-          <li style="margin-bottom: 10px;">Gestionar tus direcciones de envío 🏠</li>
-          <li style="margin-bottom: 0;">Disfrutar de ofertas exclusivas 🎁</li>
+          <li style="margin-bottom: 10px;">Guardar tus productos favoritos</li>
+          <li style="margin-bottom: 10px;">Ver el historial de tus pedidos</li>
+          <li style="margin-bottom: 10px;">Gestionar tus direcciones de envio</li>
+          <li style="margin-bottom: 0;">Disfrutar de ofertas exclusivas</li>
         </ul>
       </div>
       
@@ -1222,7 +1217,7 @@ export function generateWelcomeEmail(data: { name: string }): { subject: string;
   `;
 
   return {
-    subject: `🎉 ¡Bienvenida a BY ARENA, ${data.name}!`,
+    subject: `Bienvenida a BY ARENA, ${data.name}!`,
     html: getBaseTemplate(content, `¡Tu cuenta en BY ARENA está lista!`)
   };
 }
@@ -1237,7 +1232,6 @@ export function generatePasswordResetEmail(data: { name: string; resetUrl: strin
     <div class="content">
       <div style="text-align: center; padding: 20px 0;">
         <div style="width: 80px; height: 80px; background: linear-gradient(135deg, ${BRAND_COLORS.warning} 0%, ${BRAND_COLORS.secondary} 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-          <span style="font-size: 36px;">🔐</span>
         </div>
       </div>
       
@@ -1258,7 +1252,7 @@ export function generatePasswordResetEmail(data: { name: string; resetUrl: strin
       
       <div style="background: #FFF3E0; padding: 20px; border-radius: 8px; margin: 25px 0;">
         <p style="margin: 0; font-size: 14px; color: #E65100;">
-          <strong>⚠️ Importante:</strong> Este enlace expirará en 1 hora por seguridad.
+          <strong>Importante:</strong> Este enlace expirara en 1 hora por seguridad.
         </p>
       </div>
       
@@ -1271,7 +1265,7 @@ export function generatePasswordResetEmail(data: { name: string; resetUrl: strin
   `;
 
   return {
-    subject: '🔐 Restablece tu contraseña - BY ARENA',
+    subject: 'Restablece tu contrasena - BY ARENA',
     html: getBaseTemplate(content, 'Restablecer contraseña de tu cuenta BY ARENA')
   };
 }
@@ -1290,8 +1284,7 @@ export function generateContactNotificationAdmin(data: {
     
     <div class="content">
       <div style="background: #E3F2FD; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 25px;">
-        <span style="font-size: 24px;">📬</span>
-        <strong style="color: #1565C0; margin-left: 10px;">Nuevo mensaje de contacto</strong>
+        <strong style="color: #1565C0;">Nuevo mensaje de contacto</strong>
       </div>
       
       <h2 style="color: ${BRAND_COLORS.secondary}; font-family: 'Playfair Display', Georgia, serif; font-size: 22px;">
@@ -1332,7 +1325,7 @@ export function generateContactNotificationAdmin(data: {
   `;
 
   return {
-    subject: `📬 Nuevo contacto: ${data.subject}`,
+    subject: `Nuevo contacto: ${data.subject}`,
     html: getBaseTemplate(content, `Mensaje de ${data.name}`)
   };
 }

@@ -5,7 +5,7 @@ const STRIPE_SECRET_KEY = import.meta.env.STRIPE_SECRET_KEY || 'sk_test_TU_CLAVE
 const STRIPE_WEBHOOK_SECRET_KEY = import.meta.env.STRIPE_WEBHOOK_SECRET || 'whsec_TU_WEBHOOK_SECRET';
 
 if (!STRIPE_SECRET_KEY || STRIPE_SECRET_KEY === 'sk_test_TU_CLAVE_AQUI') {
-  console.warn('⚠️ STRIPE_SECRET_KEY no configurada - Los pagos NO funcionarán');
+  console.warn('[WARN] STRIPE_SECRET_KEY no configurada - Los pagos NO funcionaran');
 }
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY, {

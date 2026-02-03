@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
         );
       }
       html = generateRefundNotificationHTML(body.orderId, body.refundAmount, body.reason, customerName || 'Cliente');
-      subject = `Tu Reembolso ha sido Procesado ✓`;
+      subject = `Tu Reembolso ha sido Procesado`;
       text = `Hola ${customerName}, tu reembolso de $${body.refundAmount.toFixed(2)} para la orden #${body.orderId} ha sido procesado.`;
     } else if (template === 'return_request' || type === 'return_request') {
       if (!toEmail || !data) {
@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request }) => {
         data.reason,
         data.refundAmount
       );
-      subject = `Devolución ${data.returnNumber} - Recibida ✓`;
+      subject = `Devolucion ${data.returnNumber} - Recibida`;
     } else if (template === 'payment_confirmed' || type === 'payment_confirmed') {
       if (!toEmail || !data?.orderNumber || data.amount === undefined) {
         return new Response(
@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generatePaymentConfirmedHTML(data.orderNumber, data.amount);
       text = generatePaymentConfirmedPlainText(data.orderNumber, data.amount);
-      subject = `¡Pago Confirmado! Orden ${data.orderNumber} ✓`;
+      subject = `Pago Confirmado - Orden ${data.orderNumber}`;
     } else if (template === 'payment_failed' || type === 'payment_failed') {
       if (!toEmail || !data?.orderNumber || !data?.errorMessage) {
         return new Response(
@@ -147,7 +147,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generateRefundConfirmedHTML(data.orderNumber, data.refundAmount);
       text = generateRefundConfirmedPlainText(data.orderNumber, data.refundAmount);
-      subject = `Reembolso Procesado - Orden ${data.orderNumber} ✓`;
+      subject = `Reembolso Procesado - Orden ${data.orderNumber}`;
     } else if (template === 'dispute_notification' || type === 'dispute_notification') {
       if (!toEmail || !data?.orderNumber || !data?.disputeId || data.amount === undefined) {
         return new Response(
@@ -157,7 +157,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generateDisputeNotificationHTML(data.orderNumber, data.disputeId, data.amount, data.reason || 'Unknown');
       text = generateDisputeNotificationPlainText(data.orderNumber, data.disputeId, data.amount, data.reason || 'Unknown');
-      subject = `⚠️ Disputa Reportada - Orden ${data.orderNumber}`;
+      subject = `[ALERTA] Disputa Reportada - Orden ${data.orderNumber}`;
     } else {
       return new Response(
         JSON.stringify({ error: 'Tipo de email no válido' }),

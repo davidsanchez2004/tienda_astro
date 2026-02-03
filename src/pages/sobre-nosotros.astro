@@ -30,7 +30,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           Hoy, BY ARENA es sinónimo de confianza, calidad y elegancia boutique en todo el mercado.
         </p>
       </div>
-      <div class="aspect-square bg-gradient-to-br from-arena-pale to-sand rounded-lg shadow-lg"></div>
+      <div class="aspect-square bg-gradient-to-br from-arena-pale to-sand rounded-lg shadow-lg overflow-hidden">
+        <img 
+          src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&h=600&fit=crop" 
+          alt="Bisutería elegante BY ARENA"
+          class="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
     </div>
 
     {/* Values */}
@@ -47,7 +54,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </p>
         </div>
         <div>
-          <div class="text-5xl mb-4">✦</div>
+          <div class="text-5xl mb-4 text-arena">*</div>
           <h3 class="text-2xl font-serif font-bold text-gray-900 mb-3">Calidad</h3>
           <p class="text-gray-700">
             Materiales premium y acabados impecables en cada detalle

@@ -69,12 +69,12 @@ export function generateOrderConfirmationHTML(props: OrderConfirmationEmailProps
         
         <p>Tu compra ha sido procesada exitosamente. Aquí están los detalles de tu orden:</p>
 
-        ${checkoutType === 'guest' ? '<div class="guest-badge">🎁 Compra como Invitado</div>' : ''}
+        ${checkoutType === 'guest' ? '<div class="guest-badge">Compra como Invitado</div>' : ''}
         
         <div class="order-info">
           <p><strong>Número de Orden:</strong> #${orderId}</p>
           <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Estado:</strong> <span style="color: #28a745; font-weight: 600;">✓ Pagado</span></p>
+          <p><strong>Estado:</strong> <span style="color: #28a745; font-weight: 600;">Pagado</span></p>
           <p><strong>Dirección de Envío:</strong> ${shippingAddress}</p>
         </div>
 
@@ -136,7 +136,7 @@ Tu compra ha sido procesada exitosamente. Aquí están los detalles:
 
 NÚMERO DE ORDEN: #${orderId}
 EMAIL: ${email}
-ESTADO: Pagado ✓
+ESTADO: Pagado
 TIPO: ${checkoutType === 'guest' ? 'Compra como Invitado' : 'Cliente Registrado'}
 DIRECCIÓN: ${shippingAddress}
 

@@ -157,7 +157,7 @@ export function generateRefundNotificationHTML(
   <body>
     <div class="container">
       <div class="header">
-        <h1>✓ Reembolso Procesado</h1>
+        <h1>Reembolso Procesado</h1>
       </div>
       
       <div class="content">
@@ -221,7 +221,7 @@ export function generateReturnRequestHTML(
   <body>
     <div class="container">
       <div class="header">
-        <h1>✓ Solicitud de Devolución Recibida</h1>
+        <h1>Solicitud de Devolucion Recibida</h1>
       </div>
       
       <div class="content">
@@ -275,7 +275,7 @@ export function generateReturnRequestHTML(
         </div>
 
         <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px; margin: 20px 0;">
-          <p style="margin: 0; color: #92400e;"><strong>⚠️ Importante:</strong> Por favor asegúrate de incluir tu número de devolución (${returnNumber}) dentro del paquete.</p>
+          <p style="margin: 0; color: #92400e;"><strong>Importante:</strong> Por favor asegurate de incluir tu numero de devolucion (${returnNumber}) dentro del paquete.</p>
         </div>
 
         <p style="margin-top: 30px; color: #666;">Si tienes preguntas, contáctanos a <strong>hola@byarena.com</strong>.</p>
@@ -372,7 +372,7 @@ export function generatePaymentConfirmedHTML(orderNumber: string, amount: number
   <body>
     <div class="container">
       <div class="header">
-        <h1>✓ ¡Pago Confirmado!</h1>
+        <h1>Pago Confirmado!</h1>
         <p>Tu orden ha sido procesada exitosamente</p>
       </div>
       
@@ -471,7 +471,7 @@ export function generatePaymentFailedHTML(orderNumber: string, errorMessage: str
   <body>
     <div class="container">
       <div class="header">
-        <h1>⚠️ Error en el Pago</h1>
+        <h1>Error en el Pago</h1>
         <p>Tu pago no pudo ser procesado</p>
       </div>
       
@@ -521,7 +521,7 @@ export function generatePaymentFailedHTML(orderNumber: string, errorMessage: str
 
 export function generatePaymentFailedPlainText(orderNumber: string, errorMessage: string): string {
   return `
-⚠️ ERROR EN EL PAGO
+ERROR EN EL PAGO
 
 Tu pago no pudo ser procesado.
 
@@ -579,7 +579,7 @@ export function generateRefundConfirmedHTML(orderNumber: string, refundAmount: n
   <body>
     <div class="container">
       <div class="header">
-        <h1>✓ Reembolso Procesado</h1>
+        <h1>Reembolso Procesado</h1>
         <p>Tu reembolso ha sido aprobado</p>
       </div>
       
@@ -636,7 +636,7 @@ export function generateRefundConfirmedHTML(orderNumber: string, refundAmount: n
 
 export function generateRefundConfirmedPlainText(orderNumber: string, refundAmount: number): string {
   return `
-✓ REEMBOLSO PROCESADO
+REEMBOLSO PROCESADO
 
 Tu reembolso ha sido aprobado exitosamente.
 
@@ -689,7 +689,7 @@ export function generateDisputeNotificationHTML(orderNumber: string, disputeId: 
   <body>
     <div class="container">
       <div class="header">
-        <h1>⚠️ Disputa Iniciada</h1>
+        <h1>Disputa Iniciada</h1>
         <p>Se ha reportado una disputa en una orden</p>
       </div>
       
@@ -738,7 +738,7 @@ export function generateDisputeNotificationHTML(orderNumber: string, disputeId: 
 
 export function generateDisputeNotificationPlainText(orderNumber: string, disputeId: string, amount: number, reason: string): string {
   return `
-⚠️ DISPUTA INICIADA
+DISPUTA INICIADA
 
 Se ha reportado una disputa (chargeback) en la siguiente orden.
 

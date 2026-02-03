@@ -218,12 +218,12 @@ export default function ProductManager({ adminKey: initialAdminKey }: ProductMan
                   <div className="flex gap-2 flex-wrap">
                     {product.on_offer && (
                       <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
-                        🏷️ En Oferta
+                        En Oferta
                       </span>
                     )}
                     {product.featured && (
                       <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
-                        ⭐ Destacado
+                        Destacado
                       </span>
                     )}
                     {!product.active && (

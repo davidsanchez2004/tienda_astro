@@ -136,7 +136,7 @@ export async function sendReturnApprovedEmail(
   try {
     const result = await sendEmail({
       to: customerEmail,
-      subject: 'Tu devolución ha sido aprobada ✓',
+      subject: 'Tu devolucion ha sido aprobada',
       html: `
         <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(to right, #D4C5B9, #E8DCCF); padding: 20px; text-align: center;">

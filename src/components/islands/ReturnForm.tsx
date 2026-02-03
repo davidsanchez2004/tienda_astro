@@ -150,10 +150,10 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-2">Próximos Pasos:</h4>
         <ul className="space-y-1 text-sm text-blue-800">
-          <li>✓ Recibirás un email con tu número de devolución</li>
-          <li>✓ Descarga la etiqueta de envío pre-pagada</li>
-          <li>✓ Empaca el artículo y envía</li>
-          <li>✓ Recibimos y procesamos tu reembolso</li>
+          <li>Recibiras un email con tu numero de devolucion</li>
+          <li>Descarga la etiqueta de envio pre-pagada</li>
+          <li>Empaca el articulo y envia</li>
+          <li>Recibimos y procesamos tu reembolso</li>
         </ul>
       </div>
 

@@ -31,8 +31,8 @@ export const GET: APIRoute = async () => {
     return new Response(JSON.stringify({
       success: verification.success,
       message: verification.success 
-        ? '✅ Conexión con Gmail verificada correctamente' 
-        : '❌ Error de conexión con Gmail',
+        ? '[OK] Conexion con Gmail verificada correctamente' 
+        : '[ERROR] Error de conexion con Gmail',
       error: verification.error,
       config: {
         user: config.user,
@@ -66,13 +66,13 @@ export const POST: APIRoute = async ({ request }) => {
       // Si no hay body, usamos el email por defecto
     }
 
-    console.log('📧 Enviando email de prueba...');
+    console.log('[EMAIL] Enviando email de prueba...');
     const result = await sendTestEmail(to);
 
     if (result.success) {
       return new Response(JSON.stringify({
         success: true,
-        message: '✅ Email de prueba enviado correctamente',
+        message: '[OK] Email de prueba enviado correctamente',
         messageId: result.messageId,
         sentTo: to || 'Tu email de Gmail',
       }), {
@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request }) => {
     } else {
       return new Response(JSON.stringify({
         success: false,
-        message: '❌ Error enviando email de prueba',
+        message: '[ERROR] Error enviando email de prueba',
         error: result.error,
         details: result.details,
       }), {

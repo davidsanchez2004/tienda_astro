@@ -66,9 +66,9 @@ export default function AdminOrderDetail({ order, adminKey, onOrderUpdated }: Pr
       });
       
       const statusMessages: Record<string, string> = {
-        shipped: '✅ Pedido marcado como enviado. Email enviado al cliente.',
-        delivered: '🎉 Pedido marcado como entregado. Email enviado al cliente.',
-        processing: '📦 Pedido marcado como procesando.',
+        shipped: 'Pedido marcado como enviado. Email enviado al cliente.',
+        delivered: 'Pedido marcado como entregado. Email enviado al cliente.',
+        processing: 'Pedido marcado como procesando.',
       };
       
       setSuccess(statusMessages[newStatus] || 'Estado actualizado correctamente.');
@@ -239,12 +239,12 @@ export default function AdminOrderDetail({ order, adminKey, onOrderUpdated }: Pr
             >
               {loading ? (
                 <>
-                  <span className="animate-spin">⏳</span>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
                   Actualizando...
                 </>
               ) : (
                 <>
-                  <span>🎉</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                   Marcar como Entregado
                 </>
               )}
@@ -257,7 +257,7 @@ export default function AdminOrderDetail({ order, adminKey, onOrderUpdated }: Pr
       {order.status === 'delivered' && (
         <div className="border-t border-gray-200 pt-6">
           <div className="bg-green-50 p-4 rounded-lg text-center">
-            <span className="text-4xl">🎉</span>
+            <svg className="w-12 h-12 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <p className="font-semibold text-green-800 mt-2">Pedido Entregado</p>
             <p className="text-sm text-green-600">El cliente ha sido notificado</p>
           </div>

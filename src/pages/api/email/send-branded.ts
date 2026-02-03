@@ -120,14 +120,14 @@ export const POST: APIRoute = async ({ request }) => {
       case 'order_confirmation_customer': {
         const orderData = data as OrderEmailData;
         html = generateOrderConfirmationCustomer(orderData);
-        subject = `✨ Pedido #${orderData.orderNumber} confirmado - BY ARENA`;
+        subject = `Pedido #${orderData.orderNumber} confirmado - BY ARENA`;
         break;
       }
 
       case 'order_notification_admin': {
         const orderData = data as OrderEmailData;
         html = generateOrderNotificationAdmin(orderData);
-        subject = `🛒 Nuevo pedido #${orderData.orderNumber} - €${orderData.total.toFixed(2)}`;
+        subject = `[Nuevo Pedido] #${orderData.orderNumber} - ${orderData.total.toFixed(2)} EUR`;
         recipients = [adminEmail];
         break;
       }
@@ -135,21 +135,21 @@ export const POST: APIRoute = async ({ request }) => {
       case 'shipping_notification_customer': {
         const orderData = data as OrderEmailData;
         html = generateShippingNotificationCustomer(orderData);
-        subject = `🚚 Tu pedido #${orderData.orderNumber} está en camino - BY ARENA`;
+        subject = `Tu pedido #${orderData.orderNumber} esta en camino - BY ARENA`;
         break;
       }
 
       case 'delivery_confirmation_customer': {
         const orderData = data as OrderEmailData;
         html = generateDeliveryConfirmationCustomer(orderData);
-        subject = `🎉 ¡Tu pedido #${orderData.orderNumber} ha llegado! - BY ARENA`;
+        subject = `Tu pedido #${orderData.orderNumber} ha llegado - BY ARENA`;
         break;
       }
 
       case 'delivery_notification_admin': {
         const orderData = data as OrderEmailData;
         html = generateDeliveryNotificationAdmin(orderData);
-        subject = `✅ Pedido #${orderData.orderNumber} entregado`;
+        subject = `[Entregado] Pedido #${orderData.orderNumber}`;
         recipients = [adminEmail];
         break;
       }
@@ -157,7 +157,7 @@ export const POST: APIRoute = async ({ request }) => {
       case 'return_request_admin': {
         const returnData = data as ReturnEmailData;
         html = generateReturnRequestAdmin(returnData);
-        subject = `🔄 Nueva devolución #${returnData.returnNumber} - €${returnData.refundAmount.toFixed(2)}`;
+        subject = `[Devolucion] #${returnData.returnNumber} - ${returnData.refundAmount.toFixed(2)} EUR`;
         recipients = [adminEmail];
         break;
       }
@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request }) => {
       case 'return_confirmation_customer': {
         const returnData = data as ReturnEmailData;
         html = generateReturnConfirmationCustomer(returnData);
-        subject = `🔄 Devolución #${returnData.returnNumber} recibida - BY ARENA`;
+        subject = `Devolucion #${returnData.returnNumber} recibida - BY ARENA`;
         break;
       }
 
@@ -175,7 +175,7 @@ export const POST: APIRoute = async ({ request }) => {
           ? `${discountData.discountValue}%` 
           : `€${discountData.discountValue.toFixed(2)}`;
         html = generateDiscountCodeEmail(discountData);
-        subject = `🎁 ¡${discountDisplay} de descuento exclusivo para ti! - BY ARENA`;
+        subject = `${discountDisplay} de descuento exclusivo para ti - BY ARENA`;
         break;
       }
 

@@ -79,7 +79,7 @@ export default function DiscountCodeInput({
       <div className="bg-gradient-to-r from-[#C4A35A]/10 to-[#D4C5B9]/10 rounded-xl p-4 border border-[#C4A35A]/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🎉</span>
+            <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <div>
               <p className="font-semibold text-[#8B7355]">
                 Código aplicado: <span className="font-mono">{appliedDiscount.code}</span>

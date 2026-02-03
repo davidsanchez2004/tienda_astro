@@ -127,7 +127,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4">
             {adminEmail && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FAF8F5] rounded-lg">
-                <span className="text-[#8B7355]">📧</span>
+                <svg className="w-5 h-5 text-[#8B7355]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 <span className="text-sm text-gray-600">{adminEmail}</span>
               </div>
             )}
@@ -190,7 +190,7 @@ export default function AdminDashboard() {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              🏷️ Descuentos
+              Descuentos
             </button>
             <button
               onClick={() => setActiveTab('categories')}
@@ -200,7 +200,7 @@ export default function AdminDashboard() {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              📁 Categorías
+              Categorias
             </button>
             <button
               onClick={() => setActiveTab('blog')}
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              📝 Blog
+              Blog
             </button>
             <button
               onClick={() => setActiveTab('newsletter')}
@@ -220,7 +220,7 @@ export default function AdminDashboard() {
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              📧 Newsletter
+              Newsletter
             </button>
           </div>
         </div>
