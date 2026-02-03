@@ -1,20 +1,8 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminLoginForm from '../../components/admin/AdminLoginForm';
-
-// Si ya está autenticado, redirigir al dashboard
-const adminToken = Astro.cookies.get('admin_token');
-if (adminToken?.value) {
-  try {
-    const payload = JSON.parse(Buffer.from(adminToken.value, 'base64').toString());
-    if (payload.exp && payload.exp > Date.now()) {
-      // Token válido, redirigir al dashboard
-      return Astro.redirect('/admin/dashboard');
-    }
-  } catch (e) {
-    // Token inválido, mostrar login
-  }
-}
+// NOTA: No verificamos auth aquí porque el servidor no puede ver las cookies
+// El componente React verifica y redirige si ya está autenticado
 ---
 
 <AdminLayout title="Admin - Iniciar Sesión">

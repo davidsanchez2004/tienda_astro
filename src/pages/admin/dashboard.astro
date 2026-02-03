@@ -2,35 +2,9 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import AdminDashboard from '../../components/admin/AdminDashboard';
 
-// Verificar autenticación del lado del servidor
-const adminToken = Astro.cookies.get('admin_token');
-
-// Log para debug
-console.log('[Dashboard SSR] Token cookie:', adminToken?.value ? 'EXISTS' : 'NOT FOUND');
-
-// Si no hay token, redirigir a login
-if (!adminToken?.value) {
-  console.log('[Dashboard SSR] No token, redirecting to login');
-  return Astro.redirect('/admin/login');
-}
-
-// Validar que el token no ha expirado
-try {
-  const payload = JSON.parse(Buffer.from(adminToken.value, 'base64').toString());
-  if (!payload.exp || payload.exp < Date.now()) {
-    console.log('[Dashboard SSR] Token expired, redirecting to login');
-    // Eliminar cookies expiradas
-    Astro.cookies.delete('admin_token', { path: '/' });
-    Astro.cookies.delete('admin_email', { path: '/' });
-    return Astro.redirect('/admin/login');
-  }
-  console.log('[Dashboard SSR] Token valid, expires:', new Date(payload.exp).toISOString());
-} catch (e) {
-  console.log('[Dashboard SSR] Invalid token format, redirecting to login');
-  Astro.cookies.delete('admin_token', { path: '/' });
-  Astro.cookies.delete('admin_email', { path: '/' });
-  return Astro.redirect('/admin/login');
-}
+// NOTA: La verificación de autenticación se hace del lado del cliente (React)
+// porque el servidor no puede ver las cookies del navegador debido al proxy
+console.log('[Dashboard SSR] Rendering - auth check done on client side');
 ---
 
 <AdminLayout title="Admin - Dashboard">

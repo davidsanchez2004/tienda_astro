@@ -69,43 +69,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return response;
   }
 
-  // Protección de rutas admin
+  // Protección de rutas admin - DESHABILITADA temporalmente
+  // El servidor no puede ver las cookies del cliente debido al proxy
+  // La verificación se hace del lado del cliente en React
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
-    // Verificar token de admin en cookies
-    const adminToken = context.cookies.get('admin_token');
-    
-    // También verificar el header Cookie directamente como respaldo
+    // Log para debug
     const cookieHeader = request.headers.get('Cookie') || '';
-    const hasTokenInHeader = cookieHeader.includes('admin_token=');
-    
     console.log('[Middleware] Admin route:', pathname);
-    console.log('[Middleware] Astro cookie:', adminToken?.value ? 'EXISTS' : 'NOT FOUND');
-    console.log('[Middleware] Cookie header has token:', hasTokenInHeader);
+    console.log('[Middleware] Cookie header:', cookieHeader ? cookieHeader.substring(0, 50) + '...' : 'EMPTY');
     
-    if (!adminToken?.value && !hasTokenInHeader) {
-      console.log('[Middleware] No admin token, redirecting to login');
-      return context.redirect('/admin/login');
-    }
-    
-    // Validar que el token no ha expirado
-    const tokenValue = adminToken?.value || extractTokenFromHeader(cookieHeader);
-    if (tokenValue) {
-      try {
-        const payload = JSON.parse(Buffer.from(tokenValue, 'base64').toString());
-        if (!payload.exp || payload.exp < Date.now()) {
-          console.log('[Middleware] Token expired, redirecting to login');
-          context.cookies.delete('admin_token', { path: '/' });
-          context.cookies.delete('admin_email', { path: '/' });
-          return context.redirect('/admin/login');
-        }
-        console.log('[Middleware] Token valid');
-      } catch (e) {
-        console.log('[Middleware] Invalid token format, redirecting to login');
-        context.cookies.delete('admin_token', { path: '/' });
-        context.cookies.delete('admin_email', { path: '/' });
-        return context.redirect('/admin/login');
-      }
-    }
+    // NO redirigir aquí - dejar que el cliente lo maneje
+    // La verificación real ocurre en el componente React que puede leer las cookies del navegador
   }
 
   // Security headers

@@ -1,10 +1,43 @@
 import React, { useState } from 'react';
 
+// Helper para establecer cookies de forma robusta
+function setCookie(name: string, value: string, days: number = 1) {
+  const maxAge = days * 24 * 60 * 60; // en segundos
+  const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
+  // Sin Secure flag para evitar problemas con proxy HTTP/HTTPS
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; expires=${expires}; SameSite=Lax`;
+}
+
+// Helper para leer cookies
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+// Validar si un token es válido
+function isTokenValid(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token));
+    return payload.exp && payload.exp > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export default function AdminLoginForm() {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Verificar si ya está autenticado al cargar
+  React.useEffect(() => {
+    const existingToken = getCookie('admin_token');
+    if (existingToken && isTokenValid(existingToken)) {
+      console.log('[Admin Login] Already authenticated, redirecting...');
+      window.location.href = '/admin/dashboard';
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,22 +79,34 @@ export default function AdminLoginForm() {
         return;
       }
 
-      // Login exitoso - guardar también en cookie del lado del cliente como respaldo
-      // Esto asegura que la cookie exista incluso si el servidor no la propagó correctamente
+      // Login exitoso - SIEMPRE guardar cookies del lado del cliente
+      // Esto es necesario porque el servidor detrás de proxy puede tener problemas
       if (data.token && data.email) {
-        const maxAge = 60 * 60 * 24; // 24 horas en segundos
-        const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
-        document.cookie = `admin_token=${encodeURIComponent(data.token)}; path=/; expires=${expires}; SameSite=Lax`;
-        document.cookie = `admin_email=${encodeURIComponent(data.email)}; path=/; expires=${expires}; SameSite=Lax`;
-        console.log('[Admin Login] Cookies establecidas manualmente');
+        console.log('[Admin Login] Setting cookies from client side...');
+        setCookie('admin_token', data.token, 1);
+        setCookie('admin_email', data.email, 1);
+        
+        // Verificar que se guardaron
+        await new Promise(resolve => setTimeout(resolve, 50));
+        const savedToken = getCookie('admin_token');
+        console.log('[Admin Login] Token saved:', savedToken ? 'YES' : 'NO');
+        
+        if (!savedToken) {
+          console.error('[Admin Login] FAILED to save cookie!');
+          setError('Error al guardar sesión. Verifica que las cookies están habilitadas.');
+          setLoading(false);
+          return;
+        }
+      } else {
+        setError('Respuesta del servidor incompleta');
+        setLoading(false);
+        return;
       }
       
-      // Pequeño delay para asegurar que las cookies se guarden
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('[Admin Login] Login exitoso, redirigiendo...');
+      console.log('[Admin Login] Success! Redirecting...');
       window.location.href = '/admin/dashboard';
     } catch (err) {
+      console.error('[Admin Login] Error:', err);
       setError('Error al iniciar sesión');
       setLoading(false);
     }

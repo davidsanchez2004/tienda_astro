@@ -9,7 +9,7 @@ function createAdminToken(email: string): string {
   return Buffer.from(JSON.stringify(payload)).toString('base64');
 }
 
-export const POST: APIRoute = async ({ request, cookies }) => {
+export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -54,42 +54,44 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         .insert({ key: 'admin_email', value: email });
     }
 
-    // Crear token y guardarlo en cookie
+    // Crear token
     const token = createAdminToken(email);
     
-    // Detectar si estamos en producción (HTTPS)
-    const isProduction = request.url.startsWith('https://') || 
-                         request.headers.get('x-forwarded-proto') === 'https';
+    console.log('[Admin Login] Token created for:', email);
+    console.log('[Admin Login] Token:', token.substring(0, 30) + '...');
     
-    console.log('[Admin Login] Setting cookies, isProduction:', isProduction);
-    console.log('[Admin Login] Token:', token.substring(0, 20) + '...');
+    // Crear cookies manualmente - SIN secure para evitar problemas con proxy
+    // El maxAge es en segundos: 86400 = 24 horas
+    const maxAge = 86400;
+    const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
     
-    // Establecer cookie con el token
-    cookies.set('admin_token', token, {
-      path: '/',
-      httpOnly: false, // Necesitamos leerla desde JS
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 // 24 horas
-    });
-
-    cookies.set('admin_email', email, {
-      path: '/',
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24
-    });
-
-    return new Response(
+    // Construir Set-Cookie headers manualmente
+    const tokenCookie = `admin_token=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; Expires=${expires}; SameSite=Lax`;
+    const emailCookie = `admin_email=${encodeURIComponent(email)}; Path=/; Max-Age=${maxAge}; Expires=${expires}; SameSite=Lax`;
+    
+    console.log('[Admin Login] Setting cookies via headers');
+    
+    // Crear response con múltiples Set-Cookie headers
+    const response = new Response(
       JSON.stringify({ 
         success: true, 
         message: 'Login exitoso',
         email: email,
         token: token
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { 
+        status: 200, 
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     );
+    
+    // Añadir ambas cookies
+    response.headers.append('Set-Cookie', tokenCookie);
+    response.headers.append('Set-Cookie', emailCookie);
+    
+    return response;
 
   } catch (error: any) {
     console.error('Admin login error:', error);
