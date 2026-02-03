@@ -1,10 +1,19 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
 import { stripe, STRIPE_WEBHOOK_SECRET } from '../../../lib/stripe';
+import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
+import {
+  generateOrderConfirmationCustomer,
+  generateOrderNotificationAdmin,
+  type OrderEmailData,
+} from '../../../lib/email-templates-byarena';
 import type Stripe from 'stripe';
 
 // Usar el webhook secret exportado del módulo centralizado
 const webhookSecret = STRIPE_WEBHOOK_SECRET;
+
+// Email del admin hardcodeado
+const ADMIN_EMAIL = 'davidsanchezacosta0@gmail.com';
 
 // Tipos de eventos procesados
 type StripeEventType = 
@@ -120,101 +129,83 @@ export const POST: APIRoute = async ({ request }) => {
 };
 
 /**
- * Maneja sesiones de checkout completadas (legacy)
+ * Maneja sesiones de checkout completadas
+ * IMPORTANTE: El pedido ya existe (creado en create-session.ts), solo actualizamos su estado
  */
 async function handleCheckoutSessionCompleted(session: any): Promise<void> {
   console.log(`Checkout session completed: ${session.id}`);
 
-  const { userId, shippingOption, shippingAddress, couponCode } = session.metadata;
+  const orderId = session.metadata?.order_id;
 
-  // Obtener items de la sesión
-  const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-
-  // Crear orden
-  const { data: order, error: orderError } = await supabaseAdminClient
-    .from('orders')
-    .insert([
-      {
-        user_id: userId,
-        status: 'paid',
-        payment_status: 'paid',
-        subtotal: (session.amount_subtotal || 0) / 100,
-        shipping_cost: shippingOption === 'home' ? 2 : 0,
-        total: (session.amount_total || 0) / 100,
-        shipping_option: shippingOption,
-        shipping_address: JSON.parse(shippingAddress || '{}'),
-        stripe_payment_intent_id: session.payment_intent,
-        stripe_session_id: session.id,
-        updated_at: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
-
-  if (orderError) {
-    throw new Error(`Failed to create order: ${orderError.message}`);
+  if (!orderId) {
+    console.error('No order_id in checkout session metadata');
+    return;
   }
 
-  if (order) {
-    // Agregar items a la orden
-    const orderItems = lineItems.data.map((item: any) => ({
-      order_id: order.id,
-      product_id: item.price.metadata?.product_id || '',
-      quantity: item.quantity,
-      price: (item.price.unit_amount || 0) / 100,
-      total: ((item.price.unit_amount || 0) * item.quantity) / 100,
-    }));
+  // Buscar el pedido existente
+  const { data: order, error: fetchError } = await supabaseAdminClient
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
 
-    const { error: itemsError } = await supabaseAdminClient
+  if (fetchError || !order) {
+    console.error('Order not found:', orderId, fetchError);
+    return;
+  }
+
+  // Actualizar el pedido a pagado
+  const { error: updateError } = await supabaseAdminClient
+    .from('orders')
+    .update({
+      status: 'paid',
+      payment_status: 'paid',
+      stripe_payment_intent_id: session.payment_intent,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (updateError) {
+    throw new Error(`Failed to update order: ${updateError.message}`);
+  }
+
+  console.log(`Order ${orderId} marked as paid`);
+
+  // Decrementar stock de productos
+  try {
+    const { data: orderItems } = await supabaseAdminClient
       .from('order_items')
-      .insert(orderItems);
+      .select('product_id, quantity')
+      .eq('order_id', orderId);
 
-    if (itemsError) {
-      console.error('Error adding order items:', itemsError);
-    }
-
-    // Decrementar stock
-    for (const item of lineItems.data) {
-      const productId = item.price?.metadata?.product_id;
-      const quantity = item.quantity || 1;
-      if (productId) {
+    if (orderItems) {
+      for (const item of orderItems) {
         const { data: product } = await supabaseAdminClient
           .from('products')
           .select('stock')
-          .eq('id', productId)
+          .eq('id', item.product_id)
           .single();
 
         if (product) {
           await supabaseAdminClient
             .from('products')
-            .update({ stock: Math.max(0, product.stock - quantity) })
-            .eq('id', productId);
+            .update({ stock: Math.max(0, product.stock - item.quantity) })
+            .eq('id', item.product_id);
+          console.log(`Stock decremented for product ${item.product_id}: -${item.quantity}`);
         }
       }
     }
+  } catch (err) {
+    console.error('Error decrementing stock:', err);
+  }
 
-    // Actualizar cupón si fue usado
-    if (couponCode) {
-      const { data: coupon } = await supabaseAdminClient
-        .from('coupons')
-        .select('current_uses')
-        .eq('code', couponCode)
-        .single();
-
-      if (coupon) {
-        await supabaseAdminClient
-          .from('coupons')
-          .update({ current_uses: (coupon.current_uses || 0) + 1 })
-          .eq('code', couponCode);
-      }
-    }
-
-    // Limpiar carrito
-    if (userId) {
+  // Limpiar carrito si el usuario está logueado
+  if (order.user_id) {
+    try {
       const { data: cart } = await supabaseAdminClient
         .from('carts')
         .select('id')
-        .eq('user_id', userId)
+        .eq('user_id', order.user_id)
         .single();
 
       if (cart) {
@@ -222,10 +213,18 @@ async function handleCheckoutSessionCompleted(session: any): Promise<void> {
           .from('cart_items')
           .delete()
           .eq('cart_id', cart.id);
+        console.log(`Cart cleared for user ${order.user_id}`);
       }
+    } catch (err) {
+      console.error('Error clearing cart:', err);
     }
+  }
 
-    console.log(`Order ${order.id} created successfully`);
+  // Enviar email de confirmación
+  try {
+    await sendPaymentConfirmationEmail(order);
+  } catch (err) {
+    console.error('Failed to send confirmation email:', err);
   }
 }
 
@@ -488,14 +487,19 @@ async function logWebhookEvent(data: {
 
 /**
  * Envía email de confirmación de pago al cliente y notificación al admin
+ * Llama directamente a las funciones de email sin hacer fetch HTTP
  */
 async function sendPaymentConfirmationEmail(order: any): Promise<void> {
   try {
-    const appUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
     const customerEmail = order.guest_email || order.customer_email;
     const customerName = order.guest_first_name 
       ? `${order.guest_first_name} ${order.guest_last_name || ''}`.trim()
       : 'Cliente';
+    
+    if (!customerEmail) {
+      console.error('No customer email found for order:', order.id);
+      return;
+    }
     
     // Obtener items del pedido
     const { data: orderItems } = await supabaseAdminClient
@@ -509,7 +513,7 @@ async function sendPaymentConfirmationEmail(order: any): Promise<void> {
       price: item.price,
     }));
     
-    const orderData = {
+    const orderData: OrderEmailData = {
       orderId: order.id,
       orderNumber: order.id.slice(0, 8).toUpperCase(),
       customerName,
@@ -524,26 +528,30 @@ async function sendPaymentConfirmationEmail(order: any): Promise<void> {
     };
     
     // Enviar email al cliente
-    await fetch(`${appUrl}/api/email/send-branded`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        template: 'order_confirmation_customer',
+    try {
+      const customerEmailContent = generateOrderConfirmationCustomer(orderData);
+      await sendEmailWithGmail({
         to: customerEmail,
-        data: orderData,
-      }),
-    });
+        subject: customerEmailContent.subject,
+        html: customerEmailContent.html,
+      });
+      console.log('Customer confirmation email sent to:', customerEmail);
+    } catch (err) {
+      console.error('Failed to send customer email:', err);
+    }
     
     // Enviar email al admin
-    await fetch(`${appUrl}/api/email/send-branded`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        template: 'order_notification_admin',
-        to: import.meta.env.ADMIN_EMAIL || 'admin@byarena.com',
-        data: orderData,
-      }),
-    });
+    try {
+      const adminEmailContent = generateOrderNotificationAdmin(orderData);
+      await sendEmailWithGmail({
+        to: ADMIN_EMAIL,
+        subject: adminEmailContent.subject,
+        html: adminEmailContent.html,
+      });
+      console.log('Admin notification email sent to:', ADMIN_EMAIL);
+    } catch (err) {
+      console.error('Failed to send admin email:', err);
+    }
     
     console.log('Confirmation emails sent for order:', order.id);
   } catch (error) {

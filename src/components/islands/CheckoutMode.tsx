@@ -20,6 +20,7 @@ export default function CheckoutMode() {
   const [isClient, setIsClient] = useState(false);
   const [step, setStep] = useState<'summary' | 'form'>('summary');
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
+  const [userId, setUserId] = useState<string | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -49,6 +50,7 @@ export default function CheckoutMode() {
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session?.user) {
           const user = session.user;
+          setUserId(user.id); // Guardar el userId
           const fullName = user.user_metadata?.full_name || user.user_metadata?.name || '';
           const phone = user.user_metadata?.phone || '';
           
@@ -119,7 +121,8 @@ export default function CheckoutMode() {
         shipping_method: shippingMethod,
         shipping_cost: shippingCost,
         subtotal: total,
-        total: finalTotal
+        total: finalTotal,
+        user_id: userId // Incluir el userId si está logueado
       };
 
       const response = await fetch('/api/checkout/create-session', {

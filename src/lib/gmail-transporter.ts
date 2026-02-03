@@ -1,9 +1,9 @@
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 
-// Configuración de Gmail
-const GMAIL_USER = process.env.GMAIL_USER || import.meta.env.GMAIL_USER || '';
-const GMAIL_PASSWORD = process.env.GMAIL_PASSWORD || import.meta.env.GMAIL_PASSWORD || '';
-const FROM_EMAIL = process.env.FROM_EMAIL || import.meta.env.FROM_EMAIL || GMAIL_USER;
+// Configuración de Gmail - Hardcodeado para Coolify
+const GMAIL_USER = 'davidsanchezacosta0@gmail.com';
+const GMAIL_PASSWORD = 'bymf bhia bpli cmvt';
+const FROM_EMAIL = GMAIL_USER;
 
 // Crear transporter de nodemailer con Gmail
 export const transporter = nodemailer.createTransport({

@@ -5,7 +5,7 @@ import { supabaseAdminClient } from '../../../lib/supabase';
 export const POST: APIRoute = async ({ request, url }) => {
   try {
     const body = await request.json();
-    const { items, customer, shipping_method, shipping_cost, subtotal, total, discountCode } = body;
+    const { items, customer, shipping_method, shipping_cost, subtotal, total, discountCode, user_id } = body;
 
     // Validate
     if (!items || items.length === 0) {
@@ -108,14 +108,14 @@ export const POST: APIRoute = async ({ request, url }) => {
     const { data: order, error: orderError } = await supabaseAdminClient
       .from('orders')
       .insert({
-        user_id: null,
+        user_id: user_id || null, // Usar el user_id si está logueado
         status: 'pending',
         subtotal: subtotal,
         shipping_cost: shipping_cost,
         total: total,
         shipping_option: shipping_method === 'delivery' ? 'home' : 'pickup',
         shipping_address: shippingAddress,
-        checkout_type: 'guest',
+        checkout_type: user_id ? 'registered' : 'guest',
         guest_email: customer.email,
         guest_phone: customer.phone,
         guest_first_name: firstName,
@@ -181,10 +181,20 @@ export const POST: APIRoute = async ({ request, url }) => {
       success_url: `${baseUrl}/checkout-exitoso?order=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/carrito?cancelled=true`,
       customer_email: customer.email,
+      // Metadata para la sesión de checkout
       metadata: {
         order_id: order.id,
         customer_name: customer.name,
         customer_phone: customer.phone,
+      },
+      // IMPORTANTE: También pasar metadata al payment_intent para el webhook
+      payment_intent_data: {
+        metadata: {
+          order_id: order.id,
+          customer_name: customer.name,
+          customer_phone: customer.phone,
+          customer_email: customer.email,
+        },
       },
     });
 
