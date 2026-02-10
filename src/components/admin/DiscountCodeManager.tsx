@@ -24,6 +24,18 @@ interface DiscountCode {
   created_at: string;
 }
 
+interface AutoCouponRule {
+  id: string;
+  spend_threshold: number;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_purchase: number;
+  valid_days: number;
+  personal_message: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export default function DiscountCodeManager() {
   const [codes, setCodes] = useState<DiscountCode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +43,29 @@ export default function DiscountCodeManager() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'codes' | 'auto'>('codes');
+  
+  // Auto-coupon rules state
+  const [autoRules, setAutoRules] = useState<AutoCouponRule[]>([]);
+  const [showAutoForm, setShowAutoForm] = useState(false);
+  const [autoFormData, setAutoFormData] = useState({
+    spendThreshold: '',
+    discountType: 'percentage' as 'percentage' | 'fixed',
+    discountValue: '',
+    minPurchase: '',
+    validDays: '30',
+    personalMessage: '¡Gracias por confiar en BY ARENA! Como agradecimiento por tus compras, te regalamos este descuento exclusivo.',
+  });
+
+  // Resend dialog state
+  const [resendDialog, setResendDialog] = useState<{
+    open: boolean;
+    code: DiscountCode | null;
+    email: string;
+    customerName: string;
+    personalMessage: string;
+  }>({ open: false, code: null, email: '', customerName: '', personalMessage: '' });
   
   // Form state
   const [formData, setFormData] = useState({
@@ -49,6 +84,7 @@ export default function DiscountCodeManager() {
 
   useEffect(() => {
     fetchCodes();
+    fetchAutoRules();
   }, []);
 
   const fetchCodes = async () => {
@@ -66,6 +102,164 @@ export default function DiscountCodeManager() {
       setError('Error al cargar códigos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAutoRules = async () => {
+    try {
+      const adminKey = getCookie('admin_token') || '';
+      const response = await fetch('/api/admin/auto-coupon-rules', {
+        credentials: 'include',
+        headers: { 'x-admin-key': adminKey },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAutoRules(data.rules);
+      }
+    } catch (err) {
+      console.error('Error loading auto rules:', err);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    if (!resendDialog.code || !resendDialog.email) return;
+    setResendingId(resendDialog.code.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      const adminKey = getCookie('admin_token') || '';
+      const response = await fetch('/api/admin/discount-codes', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey,
+        },
+        body: JSON.stringify({
+          id: resendDialog.code.id,
+          targetEmail: resendDialog.email,
+          customerName: resendDialog.customerName,
+          personalMessage: resendDialog.personalMessage,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess(`Email reenviado a ${resendDialog.email}`);
+        setResendDialog({ open: false, code: null, email: '', customerName: '', personalMessage: '' });
+        fetchCodes();
+      } else {
+        setError(data.error || 'Error al reenviar email');
+      }
+    } catch (err) {
+      setError('Error de conexión al reenviar');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const openResendDialog = (code: DiscountCode) => {
+    setResendDialog({
+      open: true,
+      code,
+      email: code.target_email || '',
+      customerName: '',
+      personalMessage: code.personal_message || '',
+    });
+  };
+
+  const handleAutoRuleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const adminKey = getCookie('admin_token') || '';
+      const response = await fetch('/api/admin/auto-coupon-rules', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey,
+        },
+        body: JSON.stringify({
+          spendThreshold: parseFloat(autoFormData.spendThreshold),
+          discountType: autoFormData.discountType,
+          discountValue: parseFloat(autoFormData.discountValue),
+          minPurchase: autoFormData.minPurchase ? parseFloat(autoFormData.minPurchase) : 0,
+          validDays: parseInt(autoFormData.validDays) || 30,
+          personalMessage: autoFormData.personalMessage,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('¡Regla de cupón automático creada!');
+        setAutoFormData({
+          spendThreshold: '',
+          discountType: 'percentage',
+          discountValue: '',
+          minPurchase: '',
+          validDays: '30',
+          personalMessage: '¡Gracias por confiar en BY ARENA! Como agradecimiento por tus compras, te regalamos este descuento exclusivo.',
+        });
+        setShowAutoForm(false);
+        fetchAutoRules();
+      } else {
+        setError(data.error || 'Error al crear regla');
+      }
+    } catch (err) {
+      setError('Error de conexión');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleAutoRule = async (id: string, isActive: boolean) => {
+    try {
+      const adminKey = getCookie('admin_token') || '';
+      const response = await fetch('/api/admin/auto-coupon-rules', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey,
+        },
+        body: JSON.stringify({ id, is_active: !isActive }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        fetchAutoRules();
+      }
+    } catch (err) {
+      setError('Error al cambiar estado de regla');
+    }
+  };
+
+  const deleteAutoRule = async (id: string) => {
+    if (!confirm('¿Eliminar esta regla de cupón automático?')) return;
+    try {
+      const adminKey = getCookie('admin_token') || '';
+      const response = await fetch('/api/admin/auto-coupon-rules', {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey,
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('Regla eliminada');
+        fetchAutoRules();
+      }
+    } catch (err) {
+      setError('Error al eliminar regla');
     }
   };
 
@@ -182,13 +376,46 @@ export default function DiscountCodeManager() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">Códigos de Descuento</h2>
-          <p className="text-gray-600">Gestiona y envía códigos promocionales a tus clientes</p>
+          <p className="text-gray-600">Gestiona, envía y automatiza códigos promocionales</p>
         </div>
+        {activeTab === 'codes' ? (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-[#D4C5B9] text-white rounded-lg hover:bg-[#8B7355] transition-colors flex items-center gap-2"
+          >
+            {showForm ? 'Cerrar' : '+ Nuevo Codigo'}
+          </button>
+        ) : (
+          <button
+            onClick={() => setShowAutoForm(!showAutoForm)}
+            className="px-4 py-2 bg-[#D4C5B9] text-white rounded-lg hover:bg-[#8B7355] transition-colors flex items-center gap-2"
+          >
+            {showAutoForm ? 'Cerrar' : '+ Nueva Regla'}
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200">
         <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-[#D4C5B9] text-white rounded-lg hover:bg-[#8B7355] transition-colors flex items-center gap-2"
+          onClick={() => setActiveTab('codes')}
+          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'codes'
+              ? 'border-[#D4C5B9] text-[#8B7355]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
         >
-          {showForm ? 'Cerrar' : '+ Nuevo Codigo'}
+          📋 Códigos Manuales
+        </button>
+        <button
+          onClick={() => setActiveTab('auto')}
+          className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'auto'
+              ? 'border-[#D4C5B9] text-[#8B7355]'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          ⚡ Cupones Automáticos
         </button>
       </div>
 
@@ -205,7 +432,7 @@ export default function DiscountCodeManager() {
       )}
 
       {/* Form */}
-      {showForm && (
+      {activeTab === 'codes' && showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold mb-4">Crear Nuevo Código</h3>
           
@@ -431,6 +658,8 @@ export default function DiscountCodeManager() {
       )}
 
       {/* Codes List */}
+      {activeTab === 'codes' && (
+        <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -503,15 +732,32 @@ export default function DiscountCodeManager() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {code.is_active && (
-                        <button
-                          onClick={() => handleDeactivate(code.id)}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                          title="Desactivar código"
-                        >
-                          Desactivar
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {code.is_active && (
+                          <button
+                            onClick={() => openResendDialog(code)}
+                            disabled={resendingId === code.id}
+                            className="text-[#8B7355] hover:text-[#D4C5B9] text-sm flex items-center gap-1 disabled:opacity-50"
+                            title="Enviar/Reenviar por email"
+                          >
+                            {resendingId === code.id ? (
+                              <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#8B7355]"></span>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            )}
+                            Enviar
+                          </button>
+                        )}
+                        {code.is_active && (
+                          <button
+                            onClick={() => handleDeactivate(code.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                            title="Desactivar código"
+                          >
+                            Desactivar
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -546,6 +792,285 @@ export default function DiscountCodeManager() {
           </p>
         </div>
       </div>
+        </>
+      )}
+
+      {/* Auto Coupon Rules Tab */}
+      {activeTab === 'auto' && (
+        <>
+          {/* Info banner */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <div>
+                <h4 className="font-medium text-blue-800">¿Cómo funcionan los cupones automáticos?</h4>
+                <p className="text-sm text-blue-700 mt-1">
+                  Cuando un cliente alcanza el umbral de gasto acumulado que configures, se le genera automáticamente
+                  un código de descuento personal y se le envía por email. ¡Ideal para fidelizar clientes!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Auto Form */}
+          {showAutoForm && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-semibold mb-4">Nueva Regla de Cupón Automático</h3>
+              <form onSubmit={handleAutoRuleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Umbral de Gasto (€) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={autoFormData.spendThreshold}
+                      onChange={(e) => setAutoFormData({ ...autoFormData, spendThreshold: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                      placeholder="100"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Gasto acumulado total del cliente</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo de Descuento *
+                    </label>
+                    <select
+                      value={autoFormData.discountType}
+                      onChange={(e) => setAutoFormData({ ...autoFormData, discountType: e.target.value as 'percentage' | 'fixed' })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                    >
+                      <option value="percentage">Porcentaje (%)</option>
+                      <option value="fixed">Cantidad Fija (€)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Valor del Descuento *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={autoFormData.discountValue}
+                      onChange={(e) => setAutoFormData({ ...autoFormData, discountValue: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                      placeholder="10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Compra Mínima para Usar (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={autoFormData.minPurchase}
+                      onChange={(e) => setAutoFormData({ ...autoFormData, minPurchase: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Días de Validez
+                    </label>
+                    <input
+                      type="number"
+                      value={autoFormData.validDays}
+                      onChange={(e) => setAutoFormData({ ...autoFormData, validDays: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                      placeholder="30"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mensaje Personalizado del Email
+                  </label>
+                  <textarea
+                    value={autoFormData.personalMessage}
+                    onChange={(e) => setAutoFormData({ ...autoFormData, personalMessage: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                    rows={2}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 py-3 bg-[#D4C5B9] text-white rounded-lg hover:bg-[#8B7355] transition-colors disabled:opacity-50"
+                  >
+                    {submitting ? 'Creando...' : 'Crear Regla Automática'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowAutoForm(false)}
+                    className="px-6 py-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Auto Rules List */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Umbral Gasto</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Descuento</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Compra Mín.</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Validez</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {autoRules.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        No hay reglas de cupón automático. ¡Crea la primera para fidelizar a tus clientes!
+                      </td>
+                    </tr>
+                  ) : (
+                    autoRules.map((rule) => (
+                      <tr key={rule.id} className={!rule.is_active ? 'bg-gray-50 opacity-60' : ''}>
+                        <td className="px-4 py-3">
+                          <span className="font-semibold text-[#8B7355]">€{rule.spend_threshold.toFixed(2)}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium bg-[#FAF8F5] text-[#8B7355]">
+                            {rule.discount_type === 'percentage' ? `${rule.discount_value}%` : `€${rule.discount_value.toFixed(2)}`}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {rule.min_purchase > 0 ? `€${rule.min_purchase}` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {rule.valid_days} días
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => toggleAutoRule(rule.id, rule.is_active)}
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors ${
+                              rule.is_active
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {rule.is_active ? 'Activo' : 'Inactivo'}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => deleteAutoRule(rule.id)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Resend Email Dialog */}
+      {resendDialog.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">
+              Enviar Código por Email
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Código: <span className="font-mono font-semibold text-[#8B7355]">{resendDialog.code?.code}</span>
+              {' — '}
+              {resendDialog.code?.discount_type === 'percentage'
+                ? `${resendDialog.code?.discount_value}%`
+                : `€${resendDialog.code?.discount_value.toFixed(2)}`}
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email del Destinatario *
+                </label>
+                <input
+                  type="email"
+                  value={resendDialog.email}
+                  onChange={(e) => setResendDialog({ ...resendDialog, email: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                  placeholder="cliente@ejemplo.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nombre del Cliente
+                </label>
+                <input
+                  type="text"
+                  value={resendDialog.customerName}
+                  onChange={(e) => setResendDialog({ ...resendDialog, customerName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                  placeholder="María García"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mensaje Personalizado
+                </label>
+                <textarea
+                  value={resendDialog.personalMessage}
+                  onChange={(e) => setResendDialog({ ...resendDialog, personalMessage: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#D4C5B9]"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleResendEmail}
+                disabled={!resendDialog.email || resendingId !== null}
+                className="flex-1 py-2 bg-[#D4C5B9] text-white rounded-lg hover:bg-[#8B7355] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {resendingId ? (
+                  <>
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                    Enviando...
+                  </>
+                ) : (
+                  'Enviar Email'
+                )}
+              </button>
+              <button
+                onClick={() => setResendDialog({ open: false, code: null, email: '', customerName: '', personalMessage: '' })}
+                className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

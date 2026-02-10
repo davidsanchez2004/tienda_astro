@@ -95,44 +95,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     // Enviar email si se solicita y hay email de destino
     if (sendEmail && targetEmail) {
-      const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
-      const customerName = body.customerName || 'Cliente';
-      
-      try {
-        await fetch(`${baseUrl}/api/email/send-branded`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            template: 'discount_code',
-            to: targetEmail,
-            data: {
-              customerName,
-              customerEmail: targetEmail,
-              code: code.toUpperCase(),
-              discountType,
-              discountValue,
-              minPurchase: minPurchase || 0,
-              expirationDate: validUntil 
-                ? new Date(validUntil).toLocaleDateString('es-ES', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })
-                : null,
-              personalMessage,
-            },
-          }),
-        });
-
-        // Actualizar fecha de envío
-        await supabaseAdminClient
-          .from('discount_codes')
-          .update({ sent_at: new Date().toISOString() })
-          .eq('id', newCode.id);
-
-      } catch (emailError) {
-        console.error('Error sending discount email:', emailError);
-      }
+      await sendDiscountEmail(newCode, targetEmail, body.customerName, personalMessage, validUntil);
     }
 
     return new Response(
@@ -151,6 +114,124 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     );
   }
 };
+
+// PUT - Reenviar email de código existente
+export const PUT: APIRoute = async ({ request, cookies }) => {
+  if (!isAdminAuthenticated(request, cookies)) {
+    return new Response(
+      JSON.stringify({ error: 'No autorizado' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const { id, targetEmail, customerName, personalMessage } = body;
+
+    if (!id) {
+      return new Response(
+        JSON.stringify({ error: 'ID de código requerido' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Obtener el código
+    const { data: code, error: fetchError } = await supabaseAdminClient
+      .from('discount_codes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !code) {
+      return new Response(
+        JSON.stringify({ error: 'Código no encontrado' }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const emailTo = targetEmail || code.target_email;
+    if (!emailTo) {
+      return new Response(
+        JSON.stringify({ error: 'No hay email de destino para este código' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Si se proporciona un nuevo targetEmail, actualizar el código
+    if (targetEmail && targetEmail !== code.target_email) {
+      await supabaseAdminClient
+        .from('discount_codes')
+        .update({ target_email: targetEmail })
+        .eq('id', id);
+    }
+
+    await sendDiscountEmail(
+      code,
+      emailTo,
+      customerName || 'Cliente',
+      personalMessage || code.personal_message,
+      code.valid_until
+    );
+
+    return new Response(
+      JSON.stringify({ success: true, message: `Email reenviado a ${emailTo}` }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch (error: any) {
+    console.error('Error resending discount email:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+};
+
+// Función reutilizable para enviar email de descuento
+async function sendDiscountEmail(
+  code: any,
+  targetEmail: string,
+  customerName: string,
+  personalMessage: string | null,
+  validUntil: string | null
+) {
+  const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+
+  try {
+    await fetch(`${baseUrl}/api/email/send-branded`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'discount_code',
+        to: targetEmail,
+        data: {
+          customerName: customerName || 'Cliente',
+          customerEmail: targetEmail,
+          code: code.code,
+          discountType: code.discount_type,
+          discountValue: code.discount_value,
+          minPurchase: code.min_purchase || 0,
+          expirationDate: validUntil
+            ? new Date(validUntil).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : null,
+          personalMessage,
+        },
+      }),
+    });
+
+    // Actualizar fecha de envío
+    await supabaseAdminClient
+      .from('discount_codes')
+      .update({ sent_at: new Date().toISOString() })
+      .eq('id', code.id);
+  } catch (emailError) {
+    console.error('Error sending discount email:', emailError);
+    throw emailError;
+  }
+}
 
 // DELETE - Eliminar/Desactivar código
 export const DELETE: APIRoute = async ({ request, cookies }) => {

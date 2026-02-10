@@ -226,6 +226,15 @@ async function handleCheckoutSessionCompleted(session: any): Promise<void> {
   } catch (err) {
     console.error('Failed to send confirmation email:', err);
   }
+
+  // Verificar cupones automáticos por umbral de gasto
+  if (order.user_id && order.customer_email) {
+    try {
+      await checkAndSendAutoCoupons(order.user_id, order.customer_email);
+    } catch (err) {
+      console.error('Error checking auto coupons:', err);
+    }
+  }
 }
 
 /**
@@ -643,5 +652,83 @@ async function notifyAdminDispute(order: any, dispute: Stripe.Dispute): Promise<
     }
   } catch (error) {
     console.error('Failed to notify admin about dispute:', error);
+  }
+}
+
+/**
+ * Verifica reglas de cupones automáticos y envía cupones si el cliente
+ * alcanzó un umbral de gasto acumulado
+ */
+async function checkAndSendAutoCoupons(userId: string, userEmail: string): Promise<void> {
+  try {
+    // Llamar a la función de Supabase que verifica y genera cupones
+    const { data: generatedCoupons, error } = await supabaseAdminClient
+      .rpc('check_auto_coupons_for_user', {
+        p_user_id: userId,
+        p_user_email: userEmail,
+      });
+
+    if (error) {
+      console.error('Error checking auto coupons:', error);
+      return;
+    }
+
+    if (!generatedCoupons || generatedCoupons.length === 0) {
+      return;
+    }
+
+    // Para cada cupón generado, enviar email
+    const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+
+    for (const coupon of generatedCoupons) {
+      // Obtener los datos completos del código generado
+      const { data: codeData } = await supabaseAdminClient
+        .from('discount_codes')
+        .select('*')
+        .eq('code', coupon.generated_code)
+        .single();
+
+      if (!codeData) continue;
+
+      try {
+        await fetch(`${baseUrl}/api/email/send-branded`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            template: 'discount_code',
+            to: userEmail,
+            data: {
+              customerName: 'Estimado/a cliente',
+              customerEmail: userEmail,
+              code: codeData.code,
+              discountType: codeData.discount_type,
+              discountValue: codeData.discount_value,
+              minPurchase: codeData.min_purchase || 0,
+              expirationDate: codeData.valid_until
+                ? new Date(codeData.valid_until).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : null,
+              personalMessage: codeData.personal_message || 
+                '¡Gracias por confiar en BY ARENA! Como agradecimiento por tus compras, te regalamos este descuento exclusivo.',
+            },
+          }),
+        });
+
+        // Marcar como enviado
+        await supabaseAdminClient
+          .from('discount_codes')
+          .update({ sent_at: new Date().toISOString() })
+          .eq('id', codeData.id);
+
+        console.log(`Auto coupon ${codeData.code} sent to ${userEmail}`);
+      } catch (emailErr) {
+        console.error(`Failed to send auto coupon email to ${userEmail}:`, emailErr);
+      }
+    }
+  } catch (err) {
+    console.error('checkAndSendAutoCoupons error:', err);
   }
 }
