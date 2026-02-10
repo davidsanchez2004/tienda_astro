@@ -48,8 +48,8 @@ export function generateWelcomeEmailHTML(customerName: string, email: string): s
         </div>
 
         <div class="benefit">
-          <h4>Lista de Deseos</h4>
-          <p>Guarda tus joyas favoritas para comprar después.</p>
+          <h4>Ofertas Exclusivas</h4>
+          <p>Accede a descuentos y promociones especiales antes que nadie.</p>
         </div>
 
         <a href="${import.meta.env.SITE_URL}/catalogo" class="button">Explorar Catálogo</a>

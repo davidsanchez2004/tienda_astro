@@ -1191,7 +1191,7 @@ export function generateWelcomeEmail(data: { name: string }): { subject: string;
           Con tu cuenta puedes:
         </h3>
         <ul style="margin: 0; padding-left: 20px; color: ${BRAND_COLORS.text};">
-          <li style="margin-bottom: 10px;">Guardar tus productos favoritos</li>
+          <li style="margin-bottom: 10px;">Acceder a descuentos y ofertas exclusivas</li>
           <li style="margin-bottom: 10px;">Ver el historial de tus pedidos</li>
           <li style="margin-bottom: 10px;">Gestionar tus direcciones de envio</li>
           <li style="margin-bottom: 0;">Disfrutar de ofertas exclusivas</li>
