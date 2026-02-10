@@ -1,12 +1,22 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
 
+interface ReturnItemInput {
+  orderItemId: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  reason: string;
+}
+
 interface CreateReturnRequest {
   orderId: string;
   reason: string;
   description: string;
-  itemsCount: number;
+  itemsCount?: number; // legacy compat
   guestEmail?: string;
+  items?: ReturnItemInput[];
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -16,10 +26,11 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const body: CreateReturnRequest = await request.json();
-    const { orderId, reason, description, itemsCount, guestEmail } = body;
+    const { orderId, reason, description, guestEmail, items } = body;
+    const itemsCount = items?.length || body.itemsCount || 1;
 
     // Validar campos
-    if (!orderId || !reason || !description || !itemsCount) {
+    if (!orderId || !reason || !description) {
       return new Response(
         JSON.stringify({ error: 'Parámetros incompletos' }),
         { status: 400 }
@@ -51,8 +62,11 @@ export const POST: APIRoute = async ({ request }) => {
     // Generar número de devolución único
     const returnNumber = `RET-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Calcular monto de reembolso (monto total de la orden)
-    const refundAmount = order.total;
+    // Calcular monto de reembolso (basado en items seleccionados o total del pedido)
+    let refundAmount = order.total;
+    if (items && items.length > 0) {
+      refundAmount = items.reduce((sum: number, item: ReturnItemInput) => sum + (item.price * item.quantity), 0);
+    }
 
     // Crear solicitud de devolución
     const { data: returnRequest, error: returnError } = await supabaseAdminClient
@@ -73,6 +87,28 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (returnError || !returnRequest) {
       throw new Error('Error al crear solicitud de devolución');
+    }
+
+    // Insertar items individuales de devolución
+    if (items && items.length > 0) {
+      const returnItemsData = items.map((item: ReturnItemInput) => ({
+        return_id: returnRequest.id,
+        order_item_id: item.orderItemId,
+        product_id: item.productId,
+        product_name: item.productName,
+        quantity: item.quantity,
+        price: item.price,
+        reason: item.reason || reason,
+      }));
+
+      const { error: returnItemsError } = await supabaseAdminClient
+        .from('return_items')
+        .insert(returnItemsData);
+
+      if (returnItemsError) {
+        console.error('Error inserting return items:', returnItemsError);
+        // Don't fail - the return itself was created successfully
+      }
     }
 
     // Preparar datos para emails

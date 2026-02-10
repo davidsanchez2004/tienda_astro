@@ -20,6 +20,7 @@ export default function CartDisplay() {
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
   const [productStock, setProductStock] = useState<Record<string, number>>({});
   const [stockLoading, setStockLoading] = useState(true);
+  const [stockCorrected, setStockCorrected] = useState(false);
   
   const shippingCost = shippingMethod === 'delivery' ? 2 : 0;
 
@@ -65,8 +66,8 @@ export default function CartDisplay() {
       if (needsUpdate) {
         setCart(correctedCart);
         saveCart(correctedCart);
-        // Notify about the correction
-        window.dispatchEvent(new CustomEvent('cart-updated', { detail: correctedCart }));
+        setStockCorrected(true);
+        setTimeout(() => setStockCorrected(false), 5000);
       }
     } catch (err) {
       console.error('Error loading stock:', err);
@@ -199,6 +200,13 @@ export default function CartDisplay() {
   // Cart with items
   return (
     <div className="space-y-6">
+      {/* Stock correction alert */}
+      {stockCorrected && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          ⚠️ Se han ajustado las cantidades de algunos productos para no superar el stock disponible.
+        </div>
+      )}
+
       {/* Items */}
       <div className="space-y-4">
         {cart.map(item => (

@@ -12,10 +12,10 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       );
     }
 
-    // Fetch all returns
+    // Fetch all returns with their items
     const { data: returns, error } = await supabaseAdminClient
       .from('returns')
-      .select('*')
+      .select('*, return_items(id, order_item_id, product_id, product_name, quantity, price, reason)')
       .order('created_at', { ascending: false });
 
     if (error) {

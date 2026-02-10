@@ -6,6 +6,16 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null;
 }
 
+interface ReturnItem {
+  id: string;
+  order_item_id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  reason?: string;
+}
+
 interface Return {
   id: string;
   order_id: string;
@@ -18,6 +28,7 @@ interface Return {
   guest_email: string;
   items_count?: number;
   admin_notes?: string;
+  return_items?: ReturnItem[];
 }
 
 const returnStatusColors: Record<string, string> = {
@@ -347,6 +358,27 @@ export default function AdminReturnsManager() {
                   </div>
                 )}
               </div>
+
+              {/* Return Items Detail */}
+              {selectedReturn.return_items && selectedReturn.return_items.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase mb-2">Artículos a Devolver</p>
+                  <div className="space-y-2">
+                    {selectedReturn.return_items.map(item => (
+                      <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
+                        <div>
+                          <p className="font-medium text-gray-900">{item.product_name}</p>
+                          <p className="text-xs text-gray-500">
+                            Cant: {item.quantity} × €{item.price.toFixed(2)}
+                            {item.reason && ` | ${reasonLabels[item.reason] || item.reason}`}
+                          </p>
+                        </div>
+                        <span className="font-semibold text-gray-700">€{(item.quantity * item.price).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs text-gray-500 uppercase mb-2">Notas del Admin</label>

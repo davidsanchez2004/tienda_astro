@@ -26,6 +26,38 @@ if (!allowedStatuses.includes(order.status)) {
   return Astro.redirect('/devoluciones?error=invalid-status');
 }
 
+// Obtener items del pedido con info del producto
+const { data: orderItems } = await supabaseAdminClient
+  .from('order_items')
+  .select('id, product_id, quantity, price, total, products(name, image_url)')
+  .eq('order_id', id);
+
+// Obtener devoluciones previas de items para saber qué ya se devolvió
+const { data: existingReturns } = await supabaseAdminClient
+  .from('returns')
+  .select('id, status, return_items(order_item_id, quantity)')
+  .eq('order_id', id)
+  .neq('status', 'rejected')
+  .neq('status', 'cancelled');
+
+// Calcular items ya devueltos (sumar cantidades en devoluciones activas)
+const returnedQuantities: Record<string, number> = {};
+existingReturns?.forEach(ret => {
+  (ret as any).return_items?.forEach((ri: any) => {
+    returnedQuantities[ri.order_item_id] = (returnedQuantities[ri.order_item_id] || 0) + ri.quantity;
+  });
+});
+
+const formattedItems = orderItems?.map(item => ({
+  id: item.id,
+  product_id: item.product_id,
+  name: (item as any).products?.name || 'Producto',
+  image_url: (item as any).products?.image_url || '',
+  quantity: item.quantity,
+  price: item.price,
+  alreadyReturned: returnedQuantities[item.id] || 0,
+})) || [];
+
 const orderNumber = order.id.slice(0, 8).toUpperCase();
 const customerEmail = order.guest_email || '';
 ---
@@ -42,6 +74,7 @@ const customerEmail = order.guest_email || '';
       orderNumber={orderNumber}
       orderTotal={order.total}
       customerEmail={customerEmail}
+      orderItems={formattedItems}
     />
   </div>
 </BaseLayout>

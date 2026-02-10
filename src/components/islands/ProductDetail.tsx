@@ -17,6 +17,7 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [stockError, setStockError] = useState('');
 
   // Combine main image with additional images
   const allImages = [product.image_url, ...(product.images_urls || [])].filter(Boolean);
@@ -48,10 +49,11 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
       // Validar que no exceda stock disponible
       const currentQtyInCart = existingIndex >= 0 ? cart[existingIndex].quantity : 0;
       if (currentQtyInCart + quantity > product.stock) {
-        console.warn('Stock insuficiente');
+        setStockError(`Solo quedan ${product.stock} unidades${currentQtyInCart > 0 ? ` (ya tienes ${currentQtyInCart} en el carrito)` : ''}`);
         setLoading(false);
         return;
       }
+      setStockError('');
       
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += quantity;
@@ -218,6 +220,13 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
                 </button>
               </div>
             </div>
+
+            {/* Stock error */}
+            {stockError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {stockError}
+              </div>
+            )}
 
             {/* Add to Cart Button */}
             <button

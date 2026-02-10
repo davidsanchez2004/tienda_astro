@@ -15,6 +15,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
+  const [stockError, setStockError] = useState('');
 
   // Calculate final price
   const finalPrice = product.on_offer && product.offer_price 
@@ -45,10 +46,11 @@ export default function ProductCard({ product }: ProductCardProps) {
       // Validar que no exceda stock disponible
       const currentQtyInCart = existingIndex >= 0 ? cart[existingIndex].quantity : 0;
       if (currentQtyInCart + quantity > product.stock) {
-        console.warn('Stock insuficiente. En carrito:', currentQtyInCart, 'Solicitado:', quantity, 'Stock:', product.stock);
+        setStockError(`Solo quedan ${product.stock} unidades${currentQtyInCart > 0 ? ` (ya tienes ${currentQtyInCart} en el carrito)` : ''}`);
         setLoading(false);
         return;
       }
+      setStockError('');
       
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += quantity;
@@ -170,6 +172,11 @@ export default function ProductCard({ product }: ProductCardProps) {
                 +
               </button>
             </div>
+
+            {/* Stock error */}
+            {stockError && (
+              <p className="text-xs text-red-600 text-center">{stockError}</p>
+            )}
 
             {/* Add button */}
             <button

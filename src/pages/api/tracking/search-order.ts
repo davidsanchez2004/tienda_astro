@@ -112,7 +112,7 @@ export const POST: APIRoute = async ({ request }) => {
         price,
         products(name, image_url)
       `)
-      .eq('order_id', orderId);
+      .eq('order_id', order.id);
 
     if (itemsError) {
       console.error('Error fetching items:', itemsError);

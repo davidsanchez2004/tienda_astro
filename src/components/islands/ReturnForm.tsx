@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
 
+interface OrderItemForReturn {
+  id: string;
+  product_id: string;
+  name: string;
+  image_url: string;
+  quantity: number;
+  price: number;
+  alreadyReturned: number;
+}
+
 interface ReturnFormProps {
   orderId: string;
   orderNumber: string;
   orderTotal: number;
   customerEmail: string;
+  orderItems?: OrderItemForReturn[];
 }
 
 const RETURN_REASONS = [
@@ -18,13 +29,61 @@ const RETURN_REASONS = [
   { value: 'other', label: 'Otro' },
 ];
 
-export default function ReturnForm({ orderId, orderNumber, orderTotal, customerEmail }: ReturnFormProps) {
-  const [step, setStep] = useState<'form' | 'confirmation'>('form');
-  const [reason, setReason] = useState('');
+interface SelectedItem {
+  orderItemId: string;
+  quantity: number;
+  reason: string;
+}
+
+export default function ReturnForm({ orderId, orderNumber, orderTotal, customerEmail, orderItems = [] }: ReturnFormProps) {
+  const [step, setStep] = useState<'items' | 'details' | 'confirmation'>('items');
+  const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const [generalReason, setGeneralReason] = useState('');
   const [description, setDescription] = useState('');
-  const [itemsCount, setItemsCount] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Toggle item selection
+  const toggleItem = (itemId: string) => {
+    setSelectedItems(prev => {
+      const exists = prev.find(s => s.orderItemId === itemId);
+      if (exists) {
+        return prev.filter(s => s.orderItemId !== itemId);
+      }
+      const orderItem = orderItems.find(i => i.id === itemId);
+      if (!orderItem) return prev;
+      const maxReturnableQty = orderItem.quantity - orderItem.alreadyReturned;
+      return [...prev, { orderItemId: itemId, quantity: maxReturnableQty, reason: '' }];
+    });
+  };
+
+  // Update quantity for a selected item
+  const updateItemQuantity = (itemId: string, qty: number) => {
+    const orderItem = orderItems.find(i => i.id === itemId);
+    if (!orderItem) return;
+    const maxQty = orderItem.quantity - orderItem.alreadyReturned;
+    const clampedQty = Math.max(1, Math.min(qty, maxQty));
+    
+    setSelectedItems(prev =>
+      prev.map(s => s.orderItemId === itemId ? { ...s, quantity: clampedQty } : s)
+    );
+  };
+
+  // Update individual reason
+  const updateItemReason = (itemId: string, reason: string) => {
+    setSelectedItems(prev =>
+      prev.map(s => s.orderItemId === itemId ? { ...s, reason } : s)
+    );
+  };
+
+  // Calculate refund amount based on selected items
+  const calculateRefundAmount = (): number => {
+    return selectedItems.reduce((total, sel) => {
+      const item = orderItems.find(i => i.id === sel.orderItemId);
+      if (!item) return total;
+      return total + (item.price * sel.quantity);
+    }, 0);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,19 +96,28 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId,
-          reason,
+          reason: generalReason,
           description,
-          itemsCount,
           guestEmail: customerEmail,
+          items: selectedItems.map(sel => {
+            const item = orderItems.find(i => i.id === sel.orderItemId);
+            return {
+              orderItemId: sel.orderItemId,
+              productId: item?.product_id || '',
+              productName: item?.name || '',
+              quantity: sel.quantity,
+              price: item?.price || 0,
+              reason: sel.reason || generalReason,
+            };
+          }),
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Error al crear solicitud de devolución');
+        const data = await response.json();
+        throw new Error(data.error || 'Error al crear solicitud de devolución');
       }
 
-      const data = await response.json();
-      console.log('Return created:', data);
       setStep('confirmation');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -58,6 +126,7 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
     }
   };
 
+  // === STEP 3: Confirmation ===
   if (step === 'confirmation') {
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
@@ -68,22 +137,164 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
         </div>
         <h3 className="text-xl font-bold text-green-900 mb-2">¡Solicitud Recibida!</h3>
         <p className="text-green-700 mb-4">
-          Hemos recibido tu solicitud de devolución. Te enviaremos un email con las instrucciones
-          y etiqueta de envío.
+          Hemos recibido tu solicitud de devolución para {selectedItems.length} artículo{selectedItems.length > 1 ? 's' : ''}.
+          Te enviaremos un email con las instrucciones y etiqueta de envío.
         </p>
         <p className="text-sm text-green-600 mb-4">
-          Tiempo de procesamiento: 24-48 horas
+          Reembolso estimado: €{calculateRefundAmount().toFixed(2)}
         </p>
-        <button
-          onClick={() => window.location.href = '/mis-pedidos'}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-        >
-          Volver a Mis Pedidos
-        </button>
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => window.location.href = '/mis-pedidos'}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            Mis Pedidos
+          </button>
+          <button
+            onClick={() => window.location.href = '/catalogo'}
+            className="px-6 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 transition-colors font-medium"
+          >
+            Seguir Comprando
+          </button>
+        </div>
       </div>
     );
   }
 
+  // === STEP 1: Select items ===
+  if (step === 'items') {
+    return (
+      <div className="space-y-6">
+        {/* Order Info */}
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <p className="text-sm text-gray-600">Pedido</p>
+          <p className="font-semibold text-gray-900">{orderNumber}</p>
+        </div>
+
+        {/* Item selection */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            Selecciona los artículos a devolver
+          </h3>
+          <div className="space-y-3">
+            {orderItems.map(item => {
+              const maxReturnable = item.quantity - item.alreadyReturned;
+              const isFullyReturned = maxReturnable <= 0;
+              const isSelected = selectedItems.some(s => s.orderItemId === item.id);
+              const selectedQty = selectedItems.find(s => s.orderItemId === item.id)?.quantity || 0;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`border rounded-lg p-4 transition-all ${
+                    isFullyReturned
+                      ? 'border-gray-200 bg-gray-50 opacity-60'
+                      : isSelected
+                        ? 'border-arena bg-arena-pale'
+                        : 'border-gray-200 hover:border-arena-light cursor-pointer'
+                  }`}
+                  onClick={() => !isFullyReturned && toggleItem(item.id)}
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Checkbox */}
+                    <div className="flex-shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={isFullyReturned}
+                        onChange={() => !isFullyReturned && toggleItem(item.id)}
+                        className="w-5 h-5 text-arena rounded border-gray-300 focus:ring-arena"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+
+                    {/* Image */}
+                    {item.image_url && (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    )}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{item.name}</p>
+                      <p className="text-sm text-gray-600">
+                        €{item.price.toFixed(2)} × {item.quantity}
+                      </p>
+                      {item.alreadyReturned > 0 && (
+                        <p className="text-xs text-amber-600">
+                          {item.alreadyReturned} ya devuelto{item.alreadyReturned > 1 ? 's' : ''}
+                        </p>
+                      )}
+                      {isFullyReturned && (
+                        <p className="text-xs text-red-600 font-medium">Totalmente devuelto</p>
+                      )}
+                    </div>
+
+                    {/* Quantity selector (when selected) */}
+                    {isSelected && maxReturnable > 1 && (
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <span className="text-xs text-gray-500">Cant:</span>
+                        <button
+                          type="button"
+                          onClick={() => updateItemQuantity(item.id, selectedQty - 1)}
+                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded text-sm hover:bg-gray-100"
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-medium text-sm">{selectedQty}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateItemQuantity(item.id, selectedQty + 1)}
+                          className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded text-sm hover:bg-gray-100"
+                          disabled={selectedQty >= maxReturnable}
+                        >
+                          +
+                        </button>
+                        <span className="text-xs text-gray-400">/{maxReturnable}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Summary */}
+        {selectedItems.length > 0 && (
+          <div className="bg-arena-pale p-4 rounded-lg">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700">
+                {selectedItems.length} artículo{selectedItems.length > 1 ? 's' : ''} seleccionado{selectedItems.length > 1 ? 's' : ''}
+              </span>
+              <span className="font-semibold text-arena">
+                Reembolso est.: €{calculateRefundAmount().toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Continue button */}
+        <button
+          type="button"
+          onClick={() => setStep('details')}
+          disabled={selectedItems.length === 0}
+          className="w-full bg-arena text-white py-3 rounded-lg hover:bg-arena-light transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Continuar ({selectedItems.length} artículo{selectedItems.length > 1 ? 's' : ''})
+        </button>
+
+        <a href="/devoluciones" className="block text-center text-gray-500 hover:text-gray-700 text-sm">
+          ← Volver a política de devoluciones
+        </a>
+      </div>
+    );
+  }
+
+  // === STEP 2: Details form ===
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
@@ -92,22 +303,51 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
         </div>
       )}
 
-      {/* Order Info */}
+      {/* Back button */}
+      <button
+        type="button"
+        onClick={() => setStep('items')}
+        className="text-arena hover:text-arena-light text-sm font-medium"
+      >
+        ← Volver a seleccionar artículos
+      </button>
+
+      {/* Selected items summary */}
       <div className="bg-gray-50 p-4 rounded-lg">
-        <p className="text-sm text-gray-600">Pedido</p>
-        <p className="font-semibold text-gray-900">{orderNumber}</p>
-        <p className="text-sm text-gray-600 mt-2">Monto original: ${orderTotal.toFixed(2)}</p>
+        <p className="text-sm font-medium text-gray-700 mb-3">Artículos a devolver:</p>
+        <div className="space-y-2">
+          {selectedItems.map(sel => {
+            const item = orderItems.find(i => i.id === sel.orderItemId);
+            if (!item) return null;
+            return (
+              <div key={sel.orderItemId} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  {item.image_url && (
+                    <img src={item.image_url} alt={item.name} className="w-8 h-8 object-cover rounded" />
+                  )}
+                  <span className="text-gray-900">{item.name}</span>
+                  <span className="text-gray-500">× {sel.quantity}</span>
+                </div>
+                <span className="font-medium">€{(item.price * sel.quantity).toFixed(2)}</span>
+              </div>
+            );
+          })}
+          <div className="border-t pt-2 flex justify-between font-semibold">
+            <span>Total reembolso</span>
+            <span className="text-arena">€{calculateRefundAmount().toFixed(2)}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Return Reason */}
+      {/* General Return Reason */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Razón de la Devolución *
+          Razón principal de la Devolución *
         </label>
         <div className="relative">
           <select
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            value={generalReason}
+            onChange={(e) => setGeneralReason(e.target.value)}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-white text-gray-800 font-medium appearance-none cursor-pointer hover:border-arena/50 focus:border-arena focus:ring-4 focus:ring-arena/10 focus:outline-none transition-all duration-200"
             required
           >
@@ -124,6 +364,36 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
         </div>
       </div>
 
+      {/* Per-item reason (optional, if multiple items) */}
+      {selectedItems.length > 1 && (
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            Razón por artículo (opcional)
+          </p>
+          <div className="space-y-2">
+            {selectedItems.map(sel => {
+              const item = orderItems.find(i => i.id === sel.orderItemId);
+              if (!item) return null;
+              return (
+                <div key={sel.orderItemId} className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600 truncate flex-shrink-0 w-32">{item.name}</span>
+                  <select
+                    value={sel.reason}
+                    onChange={(e) => updateItemReason(sel.orderItemId, e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                  >
+                    <option value="">Misma razón general</option>
+                    {RETURN_REASONS.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Description */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -138,42 +408,22 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
         />
       </div>
 
-      {/* Items Count */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Número de Artículos a Devolver *
-        </label>
-        <input
-          type="number"
-          value={itemsCount}
-          onChange={(e) => setItemsCount(Math.max(1, parseInt(e.target.value) || 1))}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent"
-          min="1"
-          required
-        />
-      </div>
-
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-2">Próximos Pasos:</h4>
         <ul className="space-y-1 text-sm text-blue-800">
-          <li>Recibiras un email con tu numero de devolucion</li>
-          <li>Descarga la etiqueta de envio pre-pagada</li>
-          <li>Empaca el articulo y envia</li>
-          <li>Recibimos y procesamos tu reembolso</li>
+          <li>📧 Recibirás un email con tu número de devolución</li>
+          <li>🏷️ Descarga la etiqueta de envío pre-pagada</li>
+          <li>📦 Empaca el artículo y envía</li>
+          <li>💰 Recibimos y procesamos tu reembolso (3-5 días)</li>
         </ul>
       </div>
 
       {/* Terms */}
       <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          id="terms"
-          className="mt-1"
-          required
-        />
+        <input type="checkbox" id="terms" className="mt-1" required />
         <label htmlFor="terms" className="text-sm text-gray-600">
-          Entiendo que el reembolso se procesará después de recibir e inspeccionar el artículo.
+          Entiendo que el reembolso se procesará después de recibir e inspeccionar los artículos.
           Los gastos de envío original no son reembolsables.
         </label>
       </div>
@@ -181,10 +431,10 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading || !reason || !description}
-        className="w-full bg-arena text-white py-2 rounded-lg hover:bg-arena-light transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={loading || !generalReason || !description}
+        className="w-full bg-arena text-white py-3 rounded-lg hover:bg-arena-light transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Procesando...' : 'Solicitar Devolución'}
+        {loading ? 'Procesando...' : `Solicitar Devolución (€${calculateRefundAmount().toFixed(2)})`}
       </button>
     </form>
   );
