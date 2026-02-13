@@ -128,15 +128,16 @@ export default function CartDisplay() {
       return;
     }
     
-    // Find the item to check its stock
+    // Don't allow increasing while stock is still loading
     const item = cart.find(i => i.id === itemId);
     if (!item) return;
     
-    // Check stock limit
-    const stock = productStock[item.product_id] ?? 999;
-    if (quantity > stock) {
-      // Don't allow exceeding stock
-      return;
+    // If increasing quantity, check stock is loaded and not exceeded
+    if (quantity > item.quantity) {
+      if (stockLoading) return; // Don't allow increase while loading
+      const stock = productStock[item.product_id];
+      if (stock === undefined) return; // Stock not loaded for this product
+      if (quantity > stock) return; // Don't allow exceeding stock
     }
     
     const newCart = cart.map(i =>
@@ -148,13 +149,15 @@ export default function CartDisplay() {
 
   // Helper to check if item is at max stock
   const isAtMaxStock = (item: CartItem): boolean => {
-    const stock = productStock[item.product_id] ?? 999;
+    if (stockLoading) return true; // Treat as max while loading
+    const stock = productStock[item.product_id];
+    if (stock === undefined) return true; // Stock not loaded yet
     return item.quantity >= stock;
   };
 
   // Get available stock for an item
   const getAvailableStock = (item: CartItem): number => {
-    return productStock[item.product_id] ?? 999;
+    return productStock[item.product_id] ?? 0;
   };
 
   const removeFromCart = (itemId: string) => {

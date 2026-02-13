@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { supabaseClient } from '../../lib/supabase';
 
 export default function ContactForm() {
   const [name, setName] = useState('');
@@ -16,38 +15,15 @@ export default function ContactForm() {
     setError('');
 
     try {
-      // Insert into support tickets
-      const { error: dbError } = await supabaseClient
-        .from('support_tickets')
-        .insert([
-          {
-            subject,
-            message: `De: ${name} (${email})\n\n${message}`,
-            status: 'open',
-          },
-        ]);
+      const res = await fetch('/api/contact/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
 
-      if (dbError) throw dbError;
-
-      // Enviar notificación por email al admin
-      try {
-        await fetch('/api/email/send-branded', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            template: 'contact_notification',
-            to: 'admin@byarena.com', // Se sobreescribe en la API
-            data: {
-              name,
-              email,
-              subject,
-              message
-            }
-          })
-        });
-      } catch (emailErr) {
-        console.error('Error sending email notification:', emailErr);
-        // No fallamos si el email no se envía
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Error al enviar');
       }
 
       setSuccess(true);
@@ -57,9 +33,9 @@ export default function ContactForm() {
       setMessage('');
 
       setTimeout(() => setSuccess(false), 5000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error sending message:', err);
-      setError('Error al enviar el mensaje. Por favor, inténtalo de nuevo.');
+      setError(err.message || 'Error al enviar el mensaje. Por favor, inténtalo de nuevo.');
     } finally {
       setLoading(false);
     }

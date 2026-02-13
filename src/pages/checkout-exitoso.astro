@@ -48,6 +48,51 @@ if (sessionId && isStripeConfigured()) {
           orderData = data;
           console.log('Checkout-exitoso - Orden actualizada por primera vez, user_id:', data.user_id);
           
+          // Decrementar stock de productos
+          try {
+            const { data: stockItems } = await supabaseAdminClient
+              .from('order_items')
+              .select('product_id, quantity')
+              .eq('order_id', orderId);
+
+            if (stockItems) {
+              for (const item of stockItems) {
+                const { data: product } = await supabaseAdminClient
+                  .from('products')
+                  .select('stock')
+                  .eq('id', item.product_id)
+                  .single();
+
+                if (product) {
+                  await supabaseAdminClient
+                    .from('products')
+                    .update({ stock: Math.max(0, product.stock - item.quantity) })
+                    .eq('id', item.product_id);
+                  console.log(`Checkout-exitoso - Stock decremented for ${item.product_id}: -${item.quantity}`);
+                }
+              }
+            }
+          } catch (stockErr) {
+            console.error('Error decrementing stock:', stockErr);
+          }
+
+          // Limpiar carrito si el usuario está logueado
+          if (data.user_id) {
+            try {
+              const { data: cart } = await supabaseAdminClient
+                .from('carts')
+                .select('id')
+                .eq('user_id', data.user_id)
+                .single();
+              if (cart) {
+                await supabaseAdminClient.from('cart_items').delete().eq('cart_id', cart.id);
+                console.log('Checkout-exitoso - Cart cleared for user:', data.user_id);
+              }
+            } catch (cartErr) {
+              console.error('Error clearing cart:', cartErr);
+            }
+          }
+
           // Enviar email de confirmación
           try {
             console.log('Checkout-exitoso - Enviando email a:', data.guest_email);
