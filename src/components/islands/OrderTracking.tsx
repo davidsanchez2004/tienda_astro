@@ -16,6 +16,8 @@ interface Order {
   guest_first_name: string;
   guest_last_name: string;
   total: number;
+  subtotal?: number;
+  shipping_cost?: number;
   status: string;
   created_at: string;
   updated_at: string;
@@ -26,6 +28,7 @@ interface Order {
   shipping_state: string;
   shipping_zip: string;
   shipping_country?: string;
+  shipping_option?: string;
   items: OrderItem[];
   customerName: string;
 }
@@ -166,7 +169,7 @@ export default function OrderTracking() {
                   type="text"
                   value={orderId}
                   onChange={e => setOrderId(e.target.value.toUpperCase())}
-                  placeholder="ej: ord_1234567890"
+                  placeholder="ej: D8A1A8A4"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-arena"
                   disabled={loading}
                 />
@@ -199,7 +202,7 @@ export default function OrderTracking() {
             {/* Header con estado */}
             <div className="bg-gradient-to-r from-arena to-arena/80 text-white p-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-3xl font-bold">Orden #{order.id}</h2>
+                <h2 className="text-3xl font-bold">Orden #{order.id.substring(0, 8).toUpperCase()}</h2>
                 <span
                   className={`px-4 py-2 rounded-full font-semibold text-sm ${getStatusColor(order.status)}`}
                 >
@@ -337,7 +340,7 @@ export default function OrderTracking() {
                         </div>
                       </div>
                       <p className="font-semibold text-gray-900">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        €{(item.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   ))}
@@ -353,15 +356,23 @@ export default function OrderTracking() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Subtotal:</span>
-                      <span>${(order.total - 100).toFixed(2)}</span>
+                      <span>€{(order.subtotal || (order.total - (order.shipping_cost || 0))).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Envío:</span>
-                      <span>$100.00</span>
-                    </div>
+                    {(order.shipping_cost != null && order.shipping_cost > 0) && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Envío:</span>
+                        <span>€{order.shipping_cost.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {order.shipping_option === 'pickup' && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Envío:</span>
+                        <span className="text-green-600">Recogida gratis</span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-semibold pt-2 border-t border-gray-200">
                       <span>Total:</span>
-                      <span className="text-arena">${order.total.toFixed(2)}</span>
+                      <span className="text-arena">€{order.total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

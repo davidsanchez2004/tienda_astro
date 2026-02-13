@@ -154,6 +154,20 @@ async function handleCheckoutSessionCompleted(session: any): Promise<void> {
     return;
   }
 
+  // Si ya está pagado (procesado por checkout-exitoso o payment_intent.succeeded), solo verificar cupones
+  if (order.payment_status === 'paid') {
+    console.log(`Order ${orderId} already paid, checking auto coupons only`);
+    const autoEmail = order.guest_email;
+    if (autoEmail) {
+      try {
+        await checkAndSendAutoCoupons(order.user_id || null, autoEmail);
+      } catch (err) {
+        console.error('Error checking auto coupons:', err);
+      }
+    }
+    return;
+  }
+
   // Actualizar el pedido a pagado
   const { error: updateError } = await supabaseAdminClient
     .from('orders')
@@ -262,6 +276,12 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     throw new Error(`Failed to fetch order: ${fetchError.message}`);
   }
 
+  // Si ya está pagado (procesado por checkout.session.completed), no hacer nada más
+  if (order.payment_status === 'paid') {
+    console.log(`Order ${orderId} already paid, skipping duplicate processing`);
+    return;
+  }
+
   // Actualizar estado a pagado
   const { error: updateError } = await supabaseAdminClient
     .from('orders')
@@ -305,19 +325,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     }
   } catch (err) {
     console.error('Error decrementing stock:', err);
-    // No lanzar error - el pago ya fue procesado
   }
 
-  // Enviar email (non-blocking)
+  // Enviar email
   try {
-    sendPaymentConfirmationEmail(order).catch(err => 
-      console.error('Failed to send confirmation email:', err)
-    );
+    await sendPaymentConfirmationEmail(order);
   } catch (err) {
     console.error('Error sending email:', err);
   }
 
-  // Verificar cupones automáticos por umbral de gasto (funciona para registrados e invitados)
+  // Verificar cupones automáticos
   const autoEmail2 = order.guest_email;
   if (autoEmail2) {
     try {
@@ -511,7 +528,7 @@ async function logWebhookEvent(data: {
  */
 async function sendPaymentConfirmationEmail(order: any): Promise<void> {
   try {
-    const customerEmail = order.guest_email || order.customer_email;
+    const customerEmail = order.guest_email;
     const customerName = order.guest_first_name 
       ? `${order.guest_first_name} ${order.guest_last_name || ''}`.trim()
       : 'Cliente';
@@ -592,9 +609,9 @@ async function sendPaymentFailedEmail(order: any, paymentIntent: Stripe.PaymentI
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template: 'payment_failed',
-        to: order.customer_email || order.guest_email,
+        to: order.guest_email,
         data: {
-          orderNumber: order.order_number,
+          orderNumber: order.id.slice(0, 8).toUpperCase(),
           errorMessage,
         },
       }),
@@ -619,9 +636,9 @@ async function sendRefundConfirmationEmail(order: any, refundAmount: number): Pr
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template: 'refund_confirmed',
-        to: order.customer_email || order.guest_email,
+        to: order.guest_email,
         data: {
-          orderNumber: order.order_number,
+          orderNumber: order.id.slice(0, 8).toUpperCase(),
           refundAmount,
         },
       }),
@@ -650,7 +667,7 @@ async function notifyAdminDispute(order: any, dispute: Stripe.Dispute): Promise<
         template: 'dispute_notification',
         to: adminEmail,
         data: {
-          orderNumber: order.order_number,
+          orderNumber: order.id.slice(0, 8).toUpperCase(),
           disputeId: dispute.id,
           amount: dispute.amount / 100,
           reason: dispute.reason,
@@ -697,7 +714,8 @@ async function checkAndSendAutoCoupons(userId: string | null, userEmail: string)
         .select('total')
         .ilike('guest_email', userEmail)
         .eq('payment_status', 'paid')
-        .not('status', 'in', '("cancelled","refunded")');
+        .neq('status', 'cancelled')
+        .neq('status', 'refunded');
 
       const totalSpent = (orderTotals || []).reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
       console.log(`[AutoCoupon] Guest total spent: €${totalSpent}`);
