@@ -30,6 +30,7 @@ if (sessionId && isStripeConfigured()) {
       // Actualizar orden como pagada si existe
       if (orderId) {
         console.log('Checkout-exitoso - Actualizando orden:', orderId);
+        // Solo actualizar si NO está ya pagado (evita duplicar emails si el webhook llegó antes)
         const { data, error: updateError } = await supabaseAdminClient
           .from('orders')
           .update({ 
@@ -39,12 +40,13 @@ if (sessionId && isStripeConfigured()) {
             updated_at: new Date().toISOString()
           })
           .eq('id', orderId)
+          .neq('payment_status', 'paid')
           .select()
-          .single();
+          .maybeSingle();
         
         if (!updateError && data) {
           orderData = data;
-          console.log('Checkout-exitoso - Orden actualizada, user_id:', data.user_id);
+          console.log('Checkout-exitoso - Orden actualizada por primera vez, user_id:', data.user_id);
           
           // Enviar email de confirmación
           try {
@@ -233,6 +235,17 @@ if (sessionId && isStripeConfigured()) {
               console.error('Error checking auto coupons:', couponError);
             }
             // ===== FIN CUPONES AUTOMÁTICOS =====
+        } else if (!data && !updateError) {
+          // El pedido ya estaba pagado (el webhook llegó antes), cargar datos para mostrar la página
+          console.log('Checkout-exitoso - Orden ya estaba pagada, cargando datos sin enviar emails');
+          const { data: existingOrder } = await supabaseAdminClient
+            .from('orders')
+            .select('*')
+            .eq('id', orderId)
+            .single();
+          if (existingOrder) {
+            orderData = existingOrder;
+          }
         }
       }
     }

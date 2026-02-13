@@ -5,6 +5,7 @@ import { sendEmailWithGmail } from '../../../lib/gmail-transporter';
 import {
   generateOrderConfirmationCustomer,
   generateOrderNotificationAdmin,
+  generateDiscountCodeEmail,
   type OrderEmailData,
 } from '../../../lib/email-templates-byarena';
 import type Stripe from 'stripe';
@@ -819,14 +820,12 @@ async function checkAndSendAutoCoupons(userId: string | null, userEmail: string)
                 month: 'long',
                 day: 'numeric',
               })
-            : null,
+            : undefined,
           personalMessage: codeData.personal_message ||
             '¡Gracias por confiar en BY ARENA! Como agradecimiento por tus compras, te regalamos este descuento exclusivo.',
         };
 
-        // Importar y usar directamente la función de email (sin fetch HTTP)
-        const { generateDiscountCodeEmail } = await import('../../../lib/email-templates-byarena');
-        const html = generateDiscountCodeEmail(emailData as any);
+        const html = generateDiscountCodeEmail(emailData);
         const subject = `🎁 ¡${discountDisplay} de descuento exclusivo para ti! - BY ARENA`;
 
         const result = await sendEmailWithGmail({
