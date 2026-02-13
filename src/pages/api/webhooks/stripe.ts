@@ -227,10 +227,11 @@ async function handleCheckoutSessionCompleted(session: any): Promise<void> {
     console.error('Failed to send confirmation email:', err);
   }
 
-  // Verificar cupones automáticos por umbral de gasto
-  if (order.user_id && order.customer_email) {
+  // Verificar cupones automáticos por umbral de gasto (funciona para registrados e invitados)
+  const autoEmail = order.guest_email;
+  if (autoEmail) {
     try {
-      await checkAndSendAutoCoupons(order.user_id, order.customer_email);
+      await checkAndSendAutoCoupons(order.user_id || null, autoEmail);
     } catch (err) {
       console.error('Error checking auto coupons:', err);
     }
@@ -314,6 +315,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
     );
   } catch (err) {
     console.error('Error sending email:', err);
+  }
+
+  // Verificar cupones automáticos por umbral de gasto (funciona para registrados e invitados)
+  const autoEmail2 = order.guest_email;
+  if (autoEmail2) {
+    try {
+      await checkAndSendAutoCoupons(order.user_id || null, autoEmail2);
+    } catch (err) {
+      console.error('Error checking auto coupons:', err);
+    }
   }
 }
 
@@ -657,78 +668,170 @@ async function notifyAdminDispute(order: any, dispute: Stripe.Dispute): Promise<
 
 /**
  * Verifica reglas de cupones automáticos y envía cupones si el cliente
- * alcanzó un umbral de gasto acumulado
+ * alcanzó un umbral de gasto acumulado.
+ * Soporta tanto usuarios registrados (user_id) como invitados (solo email).
  */
-async function checkAndSendAutoCoupons(userId: string, userEmail: string): Promise<void> {
+async function checkAndSendAutoCoupons(userId: string | null, userEmail: string): Promise<void> {
   try {
-    // Llamar a la función de Supabase que verifica y genera cupones
-    const { data: generatedCoupons, error } = await supabaseAdminClient
-      .rpc('check_auto_coupons_for_user', {
-        p_user_id: userId,
-        p_user_email: userEmail,
-      });
+    console.log(`[AutoCoupon] Checking for userId=${userId}, email=${userEmail}`);
 
-    if (error) {
-      console.error('Error checking auto coupons:', error);
-      return;
+    let generatedCoupons: any[] = [];
+
+    if (userId) {
+      // Usuario registrado: usar la función RPC que cuenta por user_id
+      const { data, error } = await supabaseAdminClient
+        .rpc('check_auto_coupons_for_user', {
+          p_user_id: userId,
+          p_user_email: userEmail,
+        });
+
+      if (error) {
+        console.error('[AutoCoupon] RPC error:', error);
+        return;
+      }
+      generatedCoupons = data || [];
+    } else {
+      // Invitado: calcular gasto total por email y generar cupones manualmente
+      const { data: orderTotals } = await supabaseAdminClient
+        .from('orders')
+        .select('total')
+        .ilike('guest_email', userEmail)
+        .eq('payment_status', 'paid')
+        .not('status', 'in', '("cancelled","refunded")');
+
+      const totalSpent = (orderTotals || []).reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+      console.log(`[AutoCoupon] Guest total spent: €${totalSpent}`);
+
+      // Obtener reglas activas
+      const { data: rules } = await supabaseAdminClient
+        .from('auto_coupon_rules')
+        .select('*')
+        .eq('is_active', true)
+        .order('spend_threshold', { ascending: true });
+
+      if (!rules || rules.length === 0) return;
+
+      for (const rule of rules) {
+        if (totalSpent >= Number(rule.spend_threshold)) {
+          // Verificar que no se haya enviado ya para este email+regla
+          const { data: existingLog } = await supabaseAdminClient
+            .from('auto_coupon_sent_log')
+            .select('id')
+            .eq('rule_id', rule.id)
+            .ilike('user_email', userEmail)
+            .limit(1);
+
+          if (existingLog && existingLog.length > 0) continue;
+
+          // Generar código único
+          const newCode = 'AUTO' + Math.random().toString(16).slice(2, 8).toUpperCase();
+          const validUntil = new Date();
+          validUntil.setDate(validUntil.getDate() + (rule.valid_days || 30));
+
+          const { data: insertedCode } = await supabaseAdminClient
+            .from('discount_codes')
+            .insert({
+              code: newCode,
+              discount_type: rule.discount_type,
+              discount_value: rule.discount_value,
+              min_purchase: rule.min_purchase || 0,
+              max_uses: 1,
+              per_user_limit: 1,
+              valid_until: validUntil.toISOString(),
+              target_email: userEmail,
+              personal_message: rule.personal_message || '',
+              is_active: true,
+            })
+            .select()
+            .single();
+
+          if (insertedCode) {
+            // Registrar en el log
+            await supabaseAdminClient
+              .from('auto_coupon_sent_log')
+              .insert({
+                rule_id: rule.id,
+                user_id: userId || '00000000-0000-0000-0000-000000000000',
+                user_email: userEmail,
+                discount_code_id: insertedCode.id,
+                total_spent: totalSpent,
+              });
+
+            generatedCoupons.push({ generated_code: newCode });
+          }
+        }
+      }
     }
 
     if (!generatedCoupons || generatedCoupons.length === 0) {
+      console.log('[AutoCoupon] No coupons generated');
       return;
     }
 
-    // Para cada cupón generado, enviar email
-    const baseUrl = import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321';
+    console.log(`[AutoCoupon] Generated ${generatedCoupons.length} coupon(s), sending emails...`);
 
+    // Para cada cupón generado, enviar email DIRECTAMENTE (sin fetch HTTP)
     for (const coupon of generatedCoupons) {
-      // Obtener los datos completos del código generado
       const { data: codeData } = await supabaseAdminClient
         .from('discount_codes')
         .select('*')
         .eq('code', coupon.generated_code)
         .single();
 
-      if (!codeData) continue;
+      if (!codeData) {
+        console.error(`[AutoCoupon] Code data not found for: ${coupon.generated_code}`);
+        continue;
+      }
 
       try {
-        await fetch(`${baseUrl}/api/email/send-branded`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            template: 'discount_code',
-            to: userEmail,
-            data: {
-              customerName: 'Estimado/a cliente',
-              customerEmail: userEmail,
-              code: codeData.code,
-              discountType: codeData.discount_type,
-              discountValue: codeData.discount_value,
-              minPurchase: codeData.min_purchase || 0,
-              expirationDate: codeData.valid_until
-                ? new Date(codeData.valid_until).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })
-                : null,
-              personalMessage: codeData.personal_message || 
-                '¡Gracias por confiar en BY ARENA! Como agradecimiento por tus compras, te regalamos este descuento exclusivo.',
-            },
-          }),
+        const discountDisplay = codeData.discount_type === 'percentage'
+          ? `${codeData.discount_value}%`
+          : `€${Number(codeData.discount_value).toFixed(2)}`;
+
+        const emailData = {
+          customerName: 'Estimado/a cliente',
+          customerEmail: userEmail,
+          code: codeData.code,
+          discountType: codeData.discount_type,
+          discountValue: Number(codeData.discount_value),
+          minPurchase: Number(codeData.min_purchase) || 0,
+          expirationDate: codeData.valid_until
+            ? new Date(codeData.valid_until).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : null,
+          personalMessage: codeData.personal_message ||
+            '¡Gracias por confiar en BY ARENA! Como agradecimiento por tus compras, te regalamos este descuento exclusivo.',
+        };
+
+        // Importar y usar directamente la función de email (sin fetch HTTP)
+        const { generateDiscountCodeEmail } = await import('../../../lib/email-templates-byarena');
+        const html = generateDiscountCodeEmail(emailData as any);
+        const subject = `🎁 ¡${discountDisplay} de descuento exclusivo para ti! - BY ARENA`;
+
+        const result = await sendEmailWithGmail({
+          to: userEmail,
+          subject,
+          html,
         });
 
-        // Marcar como enviado
-        await supabaseAdminClient
-          .from('discount_codes')
-          .update({ sent_at: new Date().toISOString() })
-          .eq('id', codeData.id);
-
-        console.log(`Auto coupon ${codeData.code} sent to ${userEmail}`);
+        if (result.success) {
+          // Marcar como enviado
+          await supabaseAdminClient
+            .from('discount_codes')
+            .update({ sent_at: new Date().toISOString() })
+            .eq('id', codeData.id);
+          console.log(`[AutoCoupon] Email sent: ${codeData.code} → ${userEmail}`);
+        } else {
+          console.error(`[AutoCoupon] Email failed for ${codeData.code}:`, result.error);
+        }
       } catch (emailErr) {
-        console.error(`Failed to send auto coupon email to ${userEmail}:`, emailErr);
+        console.error(`[AutoCoupon] Failed to send coupon email to ${userEmail}:`, emailErr);
       }
     }
   } catch (err) {
-    console.error('checkAndSendAutoCoupons error:', err);
+    console.error('[AutoCoupon] checkAndSendAutoCoupons error:', err);
   }
 }
