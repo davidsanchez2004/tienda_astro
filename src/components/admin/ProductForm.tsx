@@ -20,6 +20,7 @@ interface ProductFormProps {
 }
 
 export default function ProductForm({ adminKey: propAdminKey, onProductSaved, onCancel, initialProduct }: ProductFormProps) {
+  const adminKey = propAdminKey || getCookie('admin_token') || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -56,7 +57,7 @@ export default function ProductForm({ adminKey: propAdminKey, onProductSaved, on
     }
   };
 
-  const handleImageUpload = (url: string) => {
+  const handleImageUpload = (url: string, _publicId?: string) => {
     setFormData(prev => ({ ...prev, image_url: url }));
     setSuccess('Imagen subida correctamente');
     setTimeout(() => setSuccess(''), 3000);
@@ -104,7 +105,6 @@ export default function ProductForm({ adminKey: propAdminKey, onProductSaved, on
         ? `/api/admin/update-product?id=${initialProduct.id}`
         : '/api/admin/create-product';
 
-      const adminKey = propAdminKey || getCookie('admin_token') || '';
       const response = await fetch(endpoint, {
         method: initialProduct?.id ? 'PUT' : 'POST',
         credentials: 'include',
