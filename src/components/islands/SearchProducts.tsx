@@ -6,8 +6,11 @@ interface Product {
   name: string;
   price: number;
   image_url: string;
-  slug: string;
   description: string;
+  category_ids?: string[];
+  on_offer?: boolean;
+  offer_price?: number;
+  offer_percentage?: number;
 }
 
 interface Category {
@@ -16,13 +19,89 @@ interface Category {
   slug: string;
 }
 
+// Función de similitud fuzzy (distancia de Levenshtein simplificada)
+function similarity(a: string, b: string): number {
+  a = a.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  b = b.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) return 0.9;
+  
+  const len = Math.max(a.length, b.length);
+  if (len === 0) return 1;
+  
+  // Distancia de Levenshtein
+  const matrix: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= b.length; j++) {
+    matrix[0][j] = j;
+  }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return 1 - matrix[a.length][b.length] / len;
+}
+
+// Buscar si alguna palabra del query es similar a alguna palabra del texto
+function fuzzyMatch(query: string, text: string): number {
+  const queryWords = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(w => w.length > 1);
+  const textWords = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(w => w.length > 1);
+  
+  if (queryWords.length === 0 || textWords.length === 0) return 0;
+  
+  let totalScore = 0;
+  for (const qw of queryWords) {
+    let bestMatch = 0;
+    for (const tw of textWords) {
+      const sim = similarity(qw, tw);
+      if (sim > bestMatch) bestMatch = sim;
+    }
+    totalScore += bestMatch;
+  }
+  return totalScore / queryWords.length;
+}
+
 export default function SearchProducts() {
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  const handleSearch = async (searchQuery: string) => {
+  // Cargar todos los productos y categorías al montar
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          supabaseClient
+            .from('products')
+            .select('id, name, price, image_url, description, category_ids, on_offer, offer_price, offer_percentage')
+            .eq('active', true)
+            .order('featured', { ascending: false }),
+          supabaseClient
+            .from('categories')
+            .select('id, name, slug')
+        ]);
+        setAllProducts(prodRes.data || []);
+        setCategories(catRes.data || []);
+      } catch (err) {
+        console.error('Error loading data:', err);
+      }
+    };
+    loadData();
+  }, []);
+
+  const handleSearch = (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setProducts([]);
       setSearched(false);
@@ -33,80 +112,42 @@ export default function SearchProducts() {
     setSearched(true);
 
     try {
-      const searchTerm = searchQuery.toLowerCase().trim();
-      
-      // Primero buscar categorias que coincidan con el termino de busqueda
-      const { data: categories } = await supabaseClient
-        .from('categories')
-        .select('id, name, slug')
-        .ilike('name', `%${searchTerm}%`);
-      
-      const categoryIds = categories?.map((c: Category) => c.id) || [];
-      
-      // Buscar productos por nombre, descripcion o categoria
-      let productsQuery = supabaseClient
-        .from('products')
-        .select('id, name, price, image_url, slug, description, category_ids')
-        .eq('active', true);
-      
-      // Si hay categorias que coinciden, buscar productos en esas categorias O por nombre/descripcion
-      if (categoryIds.length > 0) {
-        // Buscar productos que: 
-        // 1. Tengan nombre que contenga el termino
-        // 2. O tengan descripcion que contenga el termino
-        // 3. O pertenezcan a una categoria que coincida
-        const { data: byName } = await supabaseClient
-          .from('products')
-          .select('id, name, price, image_url, slug, description, category_ids')
-          .eq('active', true)
-          .ilike('name', `%${searchTerm}%`)
-          .limit(20);
+      const term = searchQuery.trim();
+      const THRESHOLD = 0.45; // Umbral de similitud mínima
+
+      // Buscar categorías que coincidan con el término
+      const matchingCategoryIds = categories
+        .filter(c => fuzzyMatch(term, c.name) >= THRESHOLD)
+        .map(c => c.id);
+
+      // Puntuar cada producto
+      const scored = allProducts.map(product => {
+        // Similitud con nombre (peso alto)
+        const nameScore = fuzzyMatch(term, product.name) * 2;
         
-        const { data: byDescription } = await supabaseClient
-          .from('products')
-          .select('id, name, price, image_url, slug, description, category_ids')
-          .eq('active', true)
-          .ilike('description', `%${searchTerm}%`)
-          .limit(20);
+        // Similitud con descripción (peso medio)
+        const descScore = product.description ? fuzzyMatch(term, product.description) * 0.8 : 0;
         
-        const { data: byCategory } = await supabaseClient
-          .from('products')
-          .select('id, name, price, image_url, slug, description, category_ids')
-          .eq('active', true)
-          .overlaps('category_ids', categoryIds)
-          .limit(20);
+        // Coincidencia por categoría (peso medio)
+        const catScore = product.category_ids?.some(cid => matchingCategoryIds.includes(cid)) ? 1.2 : 0;
+
+        // Búsqueda exacta con ilike (contiene el texto)
+        const nameContains = product.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .includes(term.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')) ? 3 : 0;
         
-        // Combinar y eliminar duplicados
-        const allProducts = [...(byName || []), ...(byDescription || []), ...(byCategory || [])];
-        const uniqueProducts = allProducts.filter((product, index, self) =>
-          index === self.findIndex((p) => p.id === product.id)
-        );
+        const totalScore = nameScore + descScore + catScore + nameContains;
         
-        setProducts(uniqueProducts.slice(0, 20));
-      } else {
-        // Solo buscar por nombre y descripcion
-        const { data: byName } = await supabaseClient
-          .from('products')
-          .select('id, name, price, image_url, slug, description')
-          .eq('active', true)
-          .ilike('name', `%${searchTerm}%`)
-          .limit(20);
-        
-        const { data: byDescription } = await supabaseClient
-          .from('products')
-          .select('id, name, price, image_url, slug, description')
-          .eq('active', true)
-          .ilike('description', `%${searchTerm}%`)
-          .limit(20);
-        
-        // Combinar y eliminar duplicados
-        const allProducts = [...(byName || []), ...(byDescription || [])];
-        const uniqueProducts = allProducts.filter((product, index, self) =>
-          index === self.findIndex((p) => p.id === product.id)
-        );
-        
-        setProducts(uniqueProducts.slice(0, 20));
-      }
+        return { product, score: totalScore };
+      });
+
+      // Filtrar por umbral y ordenar por puntuación
+      const results = scored
+        .filter(s => s.score >= THRESHOLD)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20)
+        .map(s => s.product);
+
+      setProducts(results);
     } catch (error) {
       console.error('Error searching products:', error);
       setProducts([]);
@@ -118,10 +159,10 @@ export default function SearchProducts() {
   useEffect(() => {
     const debounce = setTimeout(() => {
       handleSearch(query);
-    }, 300);
+    }, 200);
 
     return () => clearTimeout(debounce);
-  }, [query]);
+  }, [query, allProducts, categories]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -164,7 +205,7 @@ export default function SearchProducts() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <p className="text-lg text-gray-600">No se encontraron productos para "{query}"</p>
-          <p className="text-gray-500 mt-2">Prueba con otras palabras clave</p>
+          <p className="text-gray-500 mt-2">Prueba con palabras similares o más cortas</p>
         </div>
       )}
 
@@ -197,7 +238,16 @@ export default function SearchProducts() {
                   <h3 className="font-semibold text-gray-900 group-hover:text-arena transition-colors">
                     {product.name}
                   </h3>
-                  <p className="text-arena font-bold mt-2">€{product.price.toFixed(2)}</p>
+                  {product.on_offer && (product.offer_price || product.offer_percentage) ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-arena font-bold">
+                        €{(product.offer_price || (product.price * (1 - (product.offer_percentage || 0) / 100))).toFixed(2)}
+                      </p>
+                      <p className="text-gray-400 line-through text-sm">€{product.price.toFixed(2)}</p>
+                    </div>
+                  ) : (
+                    <p className="text-arena font-bold mt-2">€{product.price.toFixed(2)}</p>
+                  )}
                 </div>
               </a>
             ))}
