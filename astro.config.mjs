@@ -11,6 +11,9 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone',
   }),
+  security: {
+    checkOrigin: false, // Desactivar CSRF - el proxy de Coolify cambia el origin
+  },
   server: {
     host: '0.0.0.0',
     port: parseInt(process.env.PORT || '4321'),

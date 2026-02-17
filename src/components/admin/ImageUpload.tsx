@@ -53,8 +53,16 @@ export default function ImageUpload({ onImageUpload, adminKey: propAdminKey, lab
       }
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Error al subir imagen');
+        // Intentar parsear como JSON, si falla mostrar texto plano
+        const text = await response.text();
+        let errorMsg = 'Error al subir imagen';
+        try {
+          const json = JSON.parse(text);
+          errorMsg = json.error || errorMsg;
+        } catch {
+          errorMsg = text.substring(0, 200) || `Error ${response.status}`;
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
