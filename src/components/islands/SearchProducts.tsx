@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabaseClient } from '../../lib/supabase';
 
 interface Product {
   id: string;
@@ -78,22 +77,16 @@ export default function SearchProducts() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  // Cargar todos los productos y categorías al montar
+  // Cargar todos los productos y categorías al montar (via API servidor)
   useEffect(() => {
     const loadData = async () => {
       try {
         const [prodRes, catRes] = await Promise.all([
-          supabaseClient
-            .from('products')
-            .select('id, name, price, image_url, description, category_ids, on_offer, offer_price, offer_percentage')
-            .eq('active', true)
-            .order('featured', { ascending: false }),
-          supabaseClient
-            .from('categories')
-            .select('id, name, slug')
+          fetch('/api/products/search?limite=100').then(r => r.json()),
+          fetch('/api/products/categories').then(r => r.json())
         ]);
-        setAllProducts(prodRes.data || []);
-        setCategories(catRes.data || []);
+        setAllProducts(prodRes.products || []);
+        setCategories(catRes.categories || []);
       } catch (err) {
         console.error('Error loading data:', err);
       }
