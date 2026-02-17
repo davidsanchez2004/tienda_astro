@@ -11,6 +11,9 @@ interface UpdateProductRequest {
   image_url: string;
   featured: boolean;
   active: boolean;
+  on_offer?: boolean;
+  offer_price?: number | null;
+  offer_percentage?: number | null;
 }
 
 export const PUT: APIRoute = async ({ request, url, cookies }) => {
@@ -41,14 +44,6 @@ export const PUT: APIRoute = async ({ request, url, cookies }) => {
       );
     }
 
-    // Generar slug desde el nombre
-    const slug = body.name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-
     // Actualizar producto en Supabase
     const { data, error } = await supabaseAdminClient
       .from('products')
@@ -61,6 +56,9 @@ export const PUT: APIRoute = async ({ request, url, cookies }) => {
         image_url: body.image_url,
         featured: body.featured,
         active: body.active,
+        on_offer: body.on_offer || false,
+        offer_price: body.offer_price || null,
+        offer_percentage: body.offer_percentage || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', productId)
@@ -68,8 +66,9 @@ export const PUT: APIRoute = async ({ request, url, cookies }) => {
       .single();
 
     if (error) {
+      console.error('[update-product] DB error:', error);
       return new Response(
-        JSON.stringify({ error: `Error en BD: ${error.message}` }),
+        JSON.stringify({ error: `Error en BD: ${error.message}`, code: error.code }),
         { status: 500 }
       );
     }
