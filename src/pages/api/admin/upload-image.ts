@@ -2,11 +2,17 @@ import type { APIRoute } from 'astro';
 import { v2 as cloudinary } from 'cloudinary';
 import { isAdminAuthenticated } from '../../../lib/admin-auth';
 
+const CLOUDINARY_CLOUD_NAME = import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME || 'dhs8kzjoo';
+const CLOUDINARY_API_KEY_VAL = import.meta.env.CLOUDINARY_API_KEY || '874527899459894';
+const CLOUDINARY_API_SECRET_VAL = import.meta.env.CLOUDINARY_API_SECRET || 'Iz5f1YageAIWxKeik2LC5n7EMt4';
+
 cloudinary.config({
-  cloud_name: import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: import.meta.env.CLOUDINARY_API_KEY,
-  api_secret: import.meta.env.CLOUDINARY_API_SECRET,
+  cloud_name: CLOUDINARY_CLOUD_NAME,
+  api_key: CLOUDINARY_API_KEY_VAL,
+  api_secret: CLOUDINARY_API_SECRET_VAL,
 });
+
+console.log('[upload-image] Cloudinary config:', { cloud_name: CLOUDINARY_CLOUD_NAME, api_key: CLOUDINARY_API_KEY_VAL ? 'SET' : 'MISSING' });
 
 interface UploadResponse {
   success: boolean;
@@ -98,9 +104,10 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       uploadStream.end(buffer);
     });
   } catch (error: any) {
+    console.error('[upload-image] Catch error:', error);
     return new Response(
-      JSON.stringify({ error: `Error: ${error.message}` }),
-      { status: 500 }
+      JSON.stringify({ error: `Error: ${error.message}`, stack: error.stack?.substring(0, 300) }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 };
