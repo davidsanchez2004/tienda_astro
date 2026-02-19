@@ -27,14 +27,37 @@ export default function SearchProducts() {
     setSearched(true);
 
     try {
+      // Split query into individual words for better matching
+      const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1);
+      
+      // Build OR filter: each word matches name OR description
+      const orFilters = words
+        .map(w => `name.ilike.%${w}%,description.ilike.%${w}%`)
+        .join(',');
+
       const { data } = await supabaseClient
         .from('products')
         .select('id, name, price, image_url, slug, description')
         .eq('active', true)
-        .ilike('name', `%${searchQuery}%`)
+        .or(orFilters)
         .limit(20);
 
-      setProducts(data || []);
+      // Sort by relevance: more word matches = higher rank
+      const sorted = (data || []).sort((a, b) => {
+        const scoreA = words.reduce((s, w) => {
+          const nameMatch = a.name.toLowerCase().includes(w) ? 2 : 0;
+          const descMatch = (a.description || '').toLowerCase().includes(w) ? 1 : 0;
+          return s + nameMatch + descMatch;
+        }, 0);
+        const scoreB = words.reduce((s, w) => {
+          const nameMatch = b.name.toLowerCase().includes(w) ? 2 : 0;
+          const descMatch = (b.description || '').toLowerCase().includes(w) ? 1 : 0;
+          return s + nameMatch + descMatch;
+        }, 0);
+        return scoreB - scoreA;
+      });
+
+      setProducts(sorted);
     } catch (error) {
       console.error('Error searching products:', error);
       setProducts([]);
