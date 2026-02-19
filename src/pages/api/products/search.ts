@@ -13,39 +13,40 @@ export const GET: APIRoute = async ({ url }) => {
     const limit = parseInt(url.searchParams.get('limite') || '20');
     const offset = parseInt(url.searchParams.get('offset') || '0');
 
-    let dbQuery = supabaseAdminClient
-      .from('products')
-      .select('*', { count: 'exact' })
-      .eq('active', true);
-
-    // Text search
-    if (query) {
-      dbQuery = dbQuery.or(
-        `name.ilike.%${query}%,description.ilike.%${query}%,sku.ilike.%${query}%`
+    if (!query || query.trim().length === 0) {
+      return new Response(
+        JSON.stringify({ products: [], total: 0 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Category filter
+    let dbQuery = supabaseAdminClient
+      .from('products')
+      .select('*', { count: 'exact' })
+      .eq('active', true)
+      .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+
     if (categoryId) {
       dbQuery = dbQuery.contains('category_ids', [categoryId]);
     }
 
-    // Price range
     if (minPrice) {
       dbQuery = dbQuery.gte('price', parseFloat(minPrice));
     }
+
     if (maxPrice) {
       dbQuery = dbQuery.lte('price', parseFloat(maxPrice));
     }
 
-    // Offer filter
     if (onOffer === 'true') {
       dbQuery = dbQuery.eq('on_offer', true);
     }
 
-    // Sorting
-    const validSort = ['price', 'name', 'created_at'].includes(sortBy) ? sortBy : 'created_at';
-    dbQuery = dbQuery.order(validSort, { ascending: sortDir === 'asc' });
+    // Sort
+    const validSortFields = ['created_at', 'price', 'name'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'created_at';
+    const ascending = sortDir === 'asc';
+    dbQuery = dbQuery.order(sortField, { ascending });
 
     // Pagination
     dbQuery = dbQuery.range(offset, offset + limit - 1);
@@ -60,11 +61,11 @@ export const GET: APIRoute = async ({ url }) => {
         total: count || 0,
         limit,
         offset,
-        query,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
+    console.error('Search error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
+import { supabaseAdminClient } from '../../../lib/supabase';
 
 const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL || 'https://orhtsdwenpgoofnpsouw.supabase.co';
 const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yaHRzZHdlbnBnb29mbnBzb3V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg5NjQzNjAsImV4cCI6MjA4NDU0MDM2MH0.79kiLMekVj2gq8EyGN0LVMMmmeq91jhnNQCHthf3AXQ';
@@ -7,38 +8,35 @@ const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciO
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { refresh_token } = body;
+    const { email } = body;
 
-    if (!refresh_token) {
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: 'Refresh token requerido' }),
+        JSON.stringify({ error: 'Email requerido' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${import.meta.env.PUBLIC_SITE_URL || 'http://localhost:4321'}/auth/callback?type=recovery`,
+    });
 
-    if (error || !data.session) {
-      return new Response(
-        JSON.stringify({ error: 'No se pudo refrescar la sesión' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (error) {
+      console.error('Password reset error:', error);
     }
 
+    // Always return success to avoid email enumeration
     return new Response(
       JSON.stringify({
-        session: {
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          expires_at: data.session.expires_at,
-        },
+        success: true,
+        message: 'Si el email existe, recibirás un enlace de recuperación',
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
-    console.error('Refresh error:', error);
+    console.error('Forgot password error:', error);
     return new Response(
       JSON.stringify({ error: 'Error del servidor' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }

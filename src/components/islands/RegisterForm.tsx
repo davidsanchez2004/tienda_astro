@@ -47,6 +47,25 @@ export default function RegisterForm() {
         if (profileError) {
           setError(profileError.message);
         } else {
+          // Vincular pedidos anteriores como invitado a la nueva cuenta
+          try {
+            const claimRes = await fetch('/api/orders/claim-guest-orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: authData.user.id,
+                email,
+              }),
+            });
+            const claimData = await claimRes.json();
+            if (claimData.claimedOrders > 0) {
+              console.log(`Se vincularon ${claimData.claimedOrders} pedido(s) de invitado a la nueva cuenta`);
+            }
+          } catch (claimErr) {
+            console.error('Error claiming guest orders:', claimErr);
+            // No fallamos si no se pueden vincular
+          }
+
           // Enviar email de bienvenida
           try {
             await fetch('/api/email/send-branded', {
