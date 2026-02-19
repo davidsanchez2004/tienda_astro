@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { supabaseClient } from '../../lib/supabase';
 
 interface CartItem {
   id: string;
@@ -27,39 +28,32 @@ function saveCart(cart: CartItem[]) {
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
 }
 
-// Get shipping method from localStorage
-function getShippingMethod(): 'delivery' | 'pickup' {
-  if (typeof window === 'undefined') return 'delivery';
-  return (localStorage.getItem('by_arena_shipping') as 'delivery' | 'pickup') || 'delivery';
-}
-
-// Save shipping method to localStorage
-function saveShippingMethod(method: 'delivery' | 'pickup') {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('by_arena_shipping', method);
-}
-
 export default function CartDisplay() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isClient, setIsClient] = useState(false);
-  const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
-  
-  const shippingCost = shippingMethod === 'delivery' ? 2 : 0;
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
-  // Mark as client-side and load cart + shipping method
+  // Load cart and fetch stock for each product
   useEffect(() => {
     setIsClient(true);
     const loadedCart = getCart();
     setCart(loadedCart);
-    setShippingMethod(getShippingMethod());
+    fetchStock(loadedCart);
   }, []);
 
-  // Save shipping method when it changes
-  useEffect(() => {
-    if (isClient) {
-      saveShippingMethod(shippingMethod);
+  async function fetchStock(items: CartItem[]) {
+    if (items.length === 0) return;
+    const productIds = [...new Set(items.map(i => i.product_id))];
+    const { data } = await supabaseClient
+      .from('products')
+      .select('id, stock')
+      .in('id', productIds);
+    if (data) {
+      const map: Record<string, number> = {};
+      data.forEach((p: any) => { map[p.id] = p.stock; });
+      setStockMap(map);
     }
-  }, [shippingMethod, isClient]);
+  }
 
   // Listen for cart updates from other components
   useEffect(() => {
@@ -80,8 +74,12 @@ export default function CartDisplay() {
       removeFromCart(itemId);
       return;
     }
-    const newCart = cart.map(item =>
-      item.id === itemId ? { ...item, quantity } : item
+    // Silently cap at available stock
+    const item = cart.find(i => i.id === itemId);
+    const maxStock = item ? (stockMap[item.product_id] ?? Infinity) : Infinity;
+    const cappedQty = Math.min(quantity, maxStock);
+    const newCart = cart.map(i =>
+      i.id === itemId ? { ...i, quantity: cappedQty } : i
     );
     setCart(newCart);
     saveCart(newCart);
@@ -94,7 +92,6 @@ export default function CartDisplay() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const total = subtotal + (cart.length > 0 ? shippingCost : 0);
 
   // Server-side or initial render: show loading
   if (!isClient) {
@@ -160,7 +157,8 @@ export default function CartDisplay() {
                 <span className="w-8 text-center font-medium">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  className="px-3 py-1 border border-arena-light rounded hover:bg-arena-pale transition-colors"
+                  disabled={item.quantity >= (stockMap[item.product_id] ?? Infinity)}
+                  className="px-3 py-1 border border-arena-light rounded hover:bg-arena-pale transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   +
                 </button>
@@ -180,65 +178,16 @@ export default function CartDisplay() {
         ))}
       </div>
 
-      {/* Shipping Options */}
-      <div className="bg-white border border-arena-light rounded-lg p-6">
-        <h3 className="font-serif font-semibold text-gray-900 mb-4">Método de envío</h3>
-        <div className="space-y-3">
-          <label className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${shippingMethod === 'delivery' ? 'border-arena bg-arena-pale' : 'border-gray-200 hover:border-arena-light'}`}>
-            <div className="flex items-center gap-3">
-              <input
-                type="radio"
-                name="shipping"
-                value="delivery"
-                checked={shippingMethod === 'delivery'}
-                onChange={() => setShippingMethod('delivery')}
-                className="w-4 h-4 text-arena"
-              />
-              <div>
-                <span className="font-medium text-gray-900">Envío a domicilio</span>
-                <p className="text-sm text-gray-500">Recibe tu pedido en casa en 2-4 días</p>
-              </div>
-            </div>
-            <span className="font-semibold text-gray-900">€2,00</span>
-          </label>
-          
-          <label className={`flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-colors ${shippingMethod === 'pickup' ? 'border-arena bg-arena-pale' : 'border-gray-200 hover:border-arena-light'}`}>
-            <div className="flex items-center gap-3">
-              <input
-                type="radio"
-                name="shipping"
-                value="pickup"
-                checked={shippingMethod === 'pickup'}
-                onChange={() => setShippingMethod('pickup')}
-                className="w-4 h-4 text-arena"
-              />
-              <div>
-                <span className="font-medium text-gray-900">Recogida en punto</span>
-                <p className="text-sm text-gray-500">Recoge gratis en nuestro punto de entrega</p>
-              </div>
-            </div>
-            <span className="font-semibold text-green-600">Gratis</span>
-          </label>
-        </div>
-      </div>
-
       {/* Summary */}
       <div className="bg-arena-pale rounded-lg p-6 space-y-3">
         <div className="flex justify-between">
-          <span className="text-gray-700">Subtotal</span>
+          <span className="text-gray-700">Subtotal ({cart.reduce((s, i) => s + i.quantity, 0)} productos)</span>
           <span className="font-semibold">€{subtotal.toFixed(2)}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-700">
-            {shippingMethod === 'delivery' ? 'Envío a domicilio' : 'Recogida en punto'}
-          </span>
-          <span className={`font-semibold ${shippingMethod === 'pickup' ? 'text-green-600' : ''}`}>
-            {shippingMethod === 'pickup' ? 'Gratis' : `€${shippingCost.toFixed(2)}`}
-          </span>
-        </div>
+        <p className="text-xs text-gray-500">Los gastos de envío se calcularán en el siguiente paso</p>
         <div className="border-t border-arena pt-3 flex justify-between text-lg">
           <span className="font-serif font-bold">Total</span>
-          <span className="font-bold text-arena">€{total.toFixed(2)}</span>
+          <span className="font-bold text-arena">€{subtotal.toFixed(2)}</span>
         </div>
       </div>
 
