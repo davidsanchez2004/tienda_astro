@@ -1,32 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabaseClient } from '../../lib/supabase';
-
-interface CartItem {
-  id: string;
-  product_id: string;
-  name: string;
-  image_url: string;
-  quantity: number;
-  price: number;
-}
-
-// Get cart from localStorage
-function getCart(): CartItem[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const cart = localStorage.getItem('by_arena_cart');
-    return cart ? JSON.parse(cart) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Save cart to localStorage
-function saveCart(cart: CartItem[]) {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem('by_arena_cart', JSON.stringify(cart));
-  window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
-}
+import { getCart, saveCart, type CartItem } from '../../stores/useCart';
 
 export default function CartDisplay() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -36,6 +10,10 @@ export default function CartDisplay() {
   // Load cart and fetch stock for each product
   useEffect(() => {
     setIsClient(true);
+    
+    // Limpiar clave antigua del carrito si existe
+    try { localStorage.removeItem('by_arena_cart'); } catch {}
+    
     const loadedCart = getCart();
     setCart(loadedCart);
     fetchStock(loadedCart);
