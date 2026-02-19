@@ -43,14 +43,34 @@ export default function UserProfile() {
 
   const loadUserData = async (currentUser: User) => {
     try {
-      // Load orders
-      const { data: ordersData } = await supabaseClient
+      // Load orders linked to user_id
+      const { data: userOrders } = await supabaseClient
         .from('orders')
         .select('*')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
-      setOrders(ordersData || []);
+      // Also load any remaining guest orders with same email (fallback)
+      let guestOrders: Order[] = [];
+      if (currentUser.email) {
+        const { data: guestData } = await supabaseClient
+          .from('orders')
+          .select('*')
+          .eq('guest_email', currentUser.email)
+          .eq('checkout_type', 'guest')
+          .is('user_id', null)
+          .order('created_at', { ascending: false });
+        guestOrders = guestData || [];
+      }
+
+      // Merge and deduplicate orders
+      const allOrders = [...(userOrders || []), ...guestOrders];
+      const uniqueOrders = allOrders.filter(
+        (order, index, self) => index === self.findIndex(o => o.id === order.id)
+      );
+      uniqueOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setOrders(uniqueOrders);
 
       // Load addresses
       const { data: addressesData } = await supabaseClient
