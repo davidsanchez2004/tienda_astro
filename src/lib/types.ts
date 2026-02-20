@@ -127,7 +127,13 @@ export interface Invoice {
   id: string;
   order_id: string;
   invoice_number: string;
-  pdf_url: string;
+  type: 'purchase' | 'return';
+  return_id?: string;
+  amount: number;
+  customer_name?: string;
+  customer_email?: string;
+  pdf_url?: string;
+  pdf_data?: string;
   created_at: string;
 }
 
@@ -135,6 +141,8 @@ export interface InvoiceData {
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string;
+  type: 'purchase' | 'return';
+  returnNumber?: string;
   customer: {
     name: string;
     email: string;
@@ -149,6 +157,7 @@ export interface InvoiceData {
   }>;
   subtotal: number;
   shipping: number;
+  discount?: number;
   tax: number;
   total: number;
   notes: string;

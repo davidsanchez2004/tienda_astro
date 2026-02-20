@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
 import { isAdminAuthenticated } from '../../../lib/admin-auth';
+import { generateReturnInvoice } from '../../../lib/invoice-service';
 
 interface UpdateReturnRequest {
   returnId: string;
@@ -61,6 +62,20 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
     if (status === 'completed') {
       updateData.completed_at = new Date().toISOString();
       updateData.refund_status = 'completed';
+    }
+
+    // Generar factura de devolución (nota de crédito) al completarse
+    if (status === 'completed') {
+      try {
+        const invoiceResult = await generateReturnInvoice(returnId);
+        if (invoiceResult.success) {
+          console.log(`[Return] Return invoice generated for return ${returnId}`);
+        } else {
+          console.error(`[Return] Failed to generate return invoice: ${invoiceResult.error}`);
+        }
+      } catch (invoiceErr) {
+        console.error('[Return] Error generating return invoice:', invoiceErr);
+      }
     }
 
     // Actualizar devolución

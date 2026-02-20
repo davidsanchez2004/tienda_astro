@@ -8,6 +8,7 @@ import {
   generateDiscountCodeEmail,
   type OrderEmailData,
 } from '../../../lib/email-templates-byarena';
+import { generatePurchaseInvoice } from '../../../lib/invoice-service';
 import type Stripe from 'stripe';
 
 // Usar el webhook secret exportado del módulo centralizado
@@ -240,6 +241,18 @@ async function handleCheckoutSessionCompleted(session: any): Promise<void> {
     await sendPaymentConfirmationEmail(order);
   } catch (err) {
     console.error('Failed to send confirmation email:', err);
+  }
+
+  // Generar factura PDF de compra
+  try {
+    const invoiceResult = await generatePurchaseInvoice(orderId);
+    if (invoiceResult.success) {
+      console.log(`[Webhook] Purchase invoice generated for order ${orderId}`);
+    } else {
+      console.error(`[Webhook] Failed to generate purchase invoice: ${invoiceResult.error}`);
+    }
+  } catch (err) {
+    console.error('[Webhook] Error generating purchase invoice:', err);
   }
 
   // Verificar cupones automáticos por umbral de gasto (funciona para registrados e invitados)

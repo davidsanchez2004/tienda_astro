@@ -4,6 +4,7 @@ import { supabaseAdminClient } from '../lib/supabase';
 import { stripe, isStripeConfigured } from '../lib/stripe';
 import { sendEmailWithGmail } from '../lib/gmail-transporter';
 import { generateOrderConfirmationCustomer, generateOrderNotificationAdmin, generateDiscountCodeEmail } from '../lib/email-templates-byarena';
+import { generatePurchaseInvoice } from '../lib/invoice-service';
 
 const { searchParams } = new URL(Astro.request.url);
 const sessionId = searchParams.get('session_id');
@@ -149,6 +150,18 @@ if (sessionId && isStripeConfigured()) {
               }
             } catch (emailError) {
               console.error('Error sending confirmation email:', emailError);
+            }
+
+            // ===== GENERAR FACTURA PDF =====
+            try {
+              const invoiceResult = await generatePurchaseInvoice(orderId);
+              if (invoiceResult.success) {
+                console.log('Purchase invoice generated for order:', orderId);
+              } else {
+                console.error('Failed to generate purchase invoice:', invoiceResult.error);
+              }
+            } catch (invoiceError) {
+              console.error('Error generating purchase invoice:', invoiceError);
             }
 
             // ===== VERIFICAR CUPONES AUTOMÁTICOS =====

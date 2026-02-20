@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import AdminOrderList from './AdminOrderList';
 import AdminOrderDetail from './AdminOrderDetail';
 import AdminReturnsManager from './AdminReturnsManager';
+import AdminInvoiceManager from './AdminInvoiceManager';
 import ProductManager from './ProductManager';
 import DiscountCodeManager from './DiscountCodeManager';
 import BlogManager from './BlogManager';
@@ -33,7 +34,7 @@ function deleteCookie(name: string) {
 }
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'orders' | 'returns' | 'products' | 'categories' | 'discounts' | 'blog' | 'newsletter'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'returns' | 'invoices' | 'products' | 'categories' | 'discounts' | 'blog' | 'newsletter'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,6 +204,16 @@ export default function AdminDashboard() {
               Devoluciones
             </button>
             <button
+              onClick={() => setActiveTab('invoices')}
+              className={`py-4 px-4 font-medium border-b-2 transition-colors ${
+                activeTab === 'invoices'
+                  ? 'border-[#D4C5B9] text-[#8B7355]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Facturas
+            </button>
+            <button
               onClick={() => setActiveTab('products')}
               className={`py-4 px-4 font-medium border-b-2 transition-colors ${
                 activeTab === 'products'
@@ -334,6 +345,8 @@ export default function AdminDashboard() {
           </div>
         ) : activeTab === 'returns' ? (
           <AdminReturnsManager />
+        ) : activeTab === 'invoices' ? (
+          <AdminInvoiceManager />
         ) : activeTab === 'discounts' ? (
           <DiscountCodeManager />
         ) : activeTab === 'categories' ? (
