@@ -2,10 +2,10 @@
  * SISTEMA DE CARRITO - BY ARENA
  * 
  * REGLAS:
- * - Invitado: usa key "guest_cart"
- * - Usuario: usa key "user_cart_<userId>"
+ * - Invitado: usa key "guest_cart" en sessionStorage (se borra al cerrar pestaña/navegador)
+ * - Usuario: usa key "user_cart_<userId>" en localStorage (persiste entre sesiones)
  * - Login: se limpia guest_cart, se carga user_cart_<userId>
- * - Logout: se elimina referencia al usuario, se usa guest_cart (vacío o existente)
+ * - Logout: se elimina referencia al usuario, se usa guest_cart (vacío)
  */
 
 export interface CartItem {
@@ -64,6 +64,23 @@ function getCartKey(): string {
   return 'guest_cart';
 }
 
+/**
+ * Determina si el carrito actual es de invitado
+ */
+function isGuestCart(): boolean {
+  return !getStoredUserId();
+}
+
+/**
+ * Obtiene el storage apropiado según el tipo de carrito:
+ * - Invitado → sessionStorage (se borra al cerrar pestaña/navegador)
+ * - Usuario autenticado → localStorage (persiste entre sesiones)
+ */
+function getCartStorage(): Storage {
+  if (typeof window === 'undefined') return localStorage; // fallback SSR
+  return isGuestCart() ? sessionStorage : localStorage;
+}
+
 // ============================================
 // OPERACIONES DEL CARRITO
 // ============================================
@@ -76,7 +93,8 @@ export function getCart(): CartItem[] {
   
   try {
     const key = getCartKey();
-    const data = localStorage.getItem(key);
+    const storage = getCartStorage();
+    const data = storage.getItem(key);
     
     if (!data) return [];
     
@@ -95,7 +113,8 @@ export function saveCart(items: CartItem[]): void {
   if (typeof window === 'undefined') return;
   
   const key = getCartKey();
-  localStorage.setItem(key, JSON.stringify(items));
+  const storage = getCartStorage();
+  storage.setItem(key, JSON.stringify(items));
   
   // Notificar a todos los componentes
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: items }));
@@ -108,7 +127,8 @@ export function clearCart(): void {
   if (typeof window === 'undefined') return;
   
   const key = getCartKey();
-  localStorage.removeItem(key);
+  const storage = getCartStorage();
+  storage.removeItem(key);
   
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: [] }));
 }
@@ -126,7 +146,7 @@ export function onUserLogin(userId: string): void {
   console.log('[Cart] User login:', userId);
   
   // 1. Limpiar el carrito de invitado (NO se transfiere)
-  localStorage.removeItem('guest_cart');
+  sessionStorage.removeItem('guest_cart');
   
   // 2. Guardar el nuevo userId
   setStoredUserId(userId);
@@ -242,6 +262,10 @@ export function debugCart(): void {
       console.log('║   -', key, ':', localStorage.getItem(key)?.substring(0, 50));
     }
   }
+  
+  console.log('║ Guest cart in sessionStorage:');
+  const guestData = sessionStorage.getItem('guest_cart');
+  console.log('║   - guest_cart:', guestData ? guestData.substring(0, 50) : '(empty)');
   
   console.log('╚══════════════════════════════════════╝');
 }
