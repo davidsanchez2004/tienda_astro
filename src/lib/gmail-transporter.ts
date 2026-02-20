@@ -18,8 +18,15 @@ export const transporter = nodemailer.createTransport({
  * Función helper para enviar emails con Gmail
  * Acepta parámetros como objeto o como argumentos separados
  */
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+  encoding?: string;
+}
+
 export async function sendEmailWithGmail(
-  toOrOptions: string | { to: string; subject: string; html: string; text?: string },
+  toOrOptions: string | { to: string; subject: string; html: string; text?: string; attachments?: EmailAttachment[] },
   subject?: string,
   html?: string,
   text?: string
@@ -29,12 +36,14 @@ export async function sendEmailWithGmail(
   let emailSubject: string;
   let emailHtml: string;
   let emailText: string | undefined;
+  let emailAttachments: EmailAttachment[] | undefined;
 
   if (typeof toOrOptions === 'object') {
     emailTo = toOrOptions.to;
     emailSubject = toOrOptions.subject;
     emailHtml = toOrOptions.html;
     emailText = toOrOptions.text;
+    emailAttachments = toOrOptions.attachments;
   } else {
     emailTo = toOrOptions;
     emailSubject = subject || '';
@@ -49,14 +58,25 @@ export async function sendEmailWithGmail(
 
   try {
     console.log(`Sending email to: ${emailTo}, subject: ${emailSubject}`);
-    const result = await transporter.sendMail({
+    const mailOptions: any = {
       from: `BY ARENA <${FROM_EMAIL}>`,
       to: emailTo,
       subject: emailSubject,
       html: emailHtml,
       text: emailText || '',
       replyTo: 'hola@byarena.com',
-    });
+    };
+
+    if (emailAttachments && emailAttachments.length > 0) {
+      mailOptions.attachments = emailAttachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType || 'application/pdf',
+        encoding: att.encoding,
+      }));
+    }
+
+    const result = await transporter.sendMail(mailOptions);
 
     console.log('Email sent successfully, messageId:', result.messageId);
     return { success: true, messageId: result.messageId };

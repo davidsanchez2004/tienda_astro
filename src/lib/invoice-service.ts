@@ -1,5 +1,6 @@
 import { supabaseAdminClient } from './supabase';
 import { generateInvoicePDF } from './invoice-generator';
+import { sendEmailWithGmail } from './gmail-transporter';
 import type { InvoiceData } from './types';
 
 /**
@@ -151,6 +152,52 @@ export async function generatePurchaseInvoice(orderId: string): Promise<{ succes
     }
 
     console.log(`[Invoice] Purchase invoice ${invoiceNumber} generated for order ${orderId}`);
+
+    // Enviar factura por email al cliente
+    const customerEmail = order.guest_email;
+    if (customerEmail) {
+      try {
+        const orderNumber = orderId.slice(0, 8).toUpperCase();
+        await sendEmailWithGmail({
+          to: customerEmail,
+          subject: `Factura #${invoiceNumber} - Pedido #${orderNumber} - BY ARENA`,
+          html: `
+            <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+              <div style="text-align: center; padding: 30px 0; border-bottom: 2px solid #D4C5B9;">
+                <h1 style="color: #D4C5B9; font-size: 28px; letter-spacing: 2px; margin: 0;">BY ARENA</h1>
+              </div>
+              <div style="padding: 30px 20px;">
+                <h2 style="color: #333; margin-bottom: 10px;">Tu factura está lista</h2>
+                <p>Hola <strong>${customerName}</strong>,</p>
+                <p>Adjuntamos la factura <strong>#${invoiceNumber}</strong> correspondiente a tu pedido <strong>#${orderNumber}</strong>.</p>
+                <div style="background: #FAF8F5; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Nº Factura:</strong> ${invoiceNumber}</p>
+                  <p style="margin: 5px 0;"><strong>Nº Pedido:</strong> #${orderNumber}</p>
+                  <p style="margin: 5px 0;"><strong>Importe:</strong> €${total.toFixed(2)}</p>
+                  <p style="margin: 5px 0;"><strong>Fecha:</strong> ${formatDateES(now)}</p>
+                </div>
+                <p>Encontrarás el PDF de la factura adjunto a este correo.</p>
+                <p style="color: #666; font-size: 14px; margin-top: 30px;">Si tienes alguna duda, no dudes en contactarnos respondiendo a este email.</p>
+              </div>
+              <div style="text-align: center; padding: 20px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+                <p>BY ARENA - Bisutería y Complementos Premium</p>
+                <p>www.byarena.com | hola@byarena.com</p>
+              </div>
+            </div>
+          `,
+          attachments: [{
+            filename: `${invoiceNumber}.pdf`,
+            content: Buffer.from(pdfBytes),
+            contentType: 'application/pdf',
+          }],
+        });
+        console.log(`[Invoice] Invoice email sent to ${customerEmail}`);
+      } catch (emailErr) {
+        console.error('[Invoice] Error sending invoice email:', emailErr);
+        // No fallar la generación de factura por error de email
+      }
+    }
+
     return { success: true, invoiceId: invoice.id };
   } catch (err) {
     console.error('[Invoice] Error generating purchase invoice:', err);
