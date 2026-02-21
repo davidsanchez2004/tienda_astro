@@ -39,14 +39,19 @@ export default function CartDisplay() {
     }
   }
 
+  const getMaxStock = (item: CartItem): number => {
+    // Prioridad: stock fresco de Supabase > stock guardado en el item
+    return stockMap[item.product_id] ?? item.stock ?? 999;
+  };
+
   const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(itemId);
       return;
     }
-    // Silently cap at available stock
     const item = cart.find(i => i.id === itemId);
-    const maxStock = item ? (stockMap[item.product_id] ?? Infinity) : Infinity;
+    if (!item) return;
+    const maxStock = getMaxStock(item);
     const cappedQty = Math.min(quantity, maxStock);
     const newCart = cart.map(i =>
       i.id === itemId ? { ...i, quantity: cappedQty } : i
@@ -125,11 +130,14 @@ export default function CartDisplay() {
                 <span className="w-8 text-center font-medium">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  disabled={item.quantity >= (stockMap[item.product_id] ?? Infinity)}
+                  disabled={item.quantity >= getMaxStock(item)}
                   className="px-3 py-1 border border-arena-light rounded hover:bg-arena-pale transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   +
                 </button>
+                {item.quantity >= getMaxStock(item) && (
+                  <span className="text-xs text-amber-600 ml-2">Máx. stock</span>
+                )}
               </div>
               <p className="text-sm font-semibold text-gray-900">
                 Subtotal: €{(item.price * item.quantity).toFixed(2)}

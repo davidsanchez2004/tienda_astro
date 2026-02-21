@@ -25,6 +25,7 @@ export interface CartItem {
   image_url: string;
   quantity: number;
   price: number;
+  stock: number;
 }
 
 // ============================================

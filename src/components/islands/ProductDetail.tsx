@@ -57,6 +57,7 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
       
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += quantity;
+        cart[existingIndex].stock = product.stock;
       } else {
         cart.push({
           id: generateId(),
@@ -64,7 +65,8 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
           name: product.name,
           image_url: product.image_url,
           quantity,
-          price
+          price,
+          stock: product.stock
         });
       }
       

@@ -54,6 +54,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += quantity;
+        cart[existingIndex].stock = product.stock;
       } else {
         cart.push({
           id: generateId(),
@@ -61,7 +62,8 @@ export default function ProductCard({ product }: ProductCardProps) {
           name: product.name,
           image_url: product.image_url,
           quantity,
-          price: finalPrice
+          price: finalPrice,
+          stock: product.stock
         });
       }
       
