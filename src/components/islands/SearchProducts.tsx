@@ -8,13 +8,34 @@ interface Product {
   image_url: string;
   slug: string;
   description: string;
+  on_offer?: boolean;
+  offer_price?: number;
+  offer_percentage?: number;
+  category_ids?: string[];
+}
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export default function SearchProducts() {
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+
+  // Cargar categorías una vez al montar
+  useEffect(() => {
+    supabaseClient
+      .from('categories')
+      .select('id, name, slug')
+      .then(({ data }) => {
+        if (data) setCategories(data);
+      });
+  }, []);
 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -27,37 +48,71 @@ export default function SearchProducts() {
     setSearched(true);
 
     try {
-      // Split query into individual words for better matching
       const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1);
-      
-      // Build OR filter: each word matches name OR description
+
+      // 1) Buscar categorías cuyos nombres coincidan con alguna palabra
+      const matchedCategoryIds = categories
+        .filter(cat => words.some(w => cat.name.toLowerCase().includes(w) || cat.slug.toLowerCase().includes(w)))
+        .map(cat => cat.id);
+
+      // 2) Buscar productos por nombre/descripción
       const orFilters = words
         .map(w => `name.ilike.%${w}%,description.ilike.%${w}%`)
         .join(',');
 
-      const { data } = await supabaseClient
+      const { data: textResults } = await supabaseClient
         .from('products')
-        .select('id, name, price, image_url, slug, description')
+        .select('id, name, price, image_url, slug, description, on_offer, offer_price, offer_percentage, category_ids')
         .eq('active', true)
         .or(orFilters)
-        .limit(20);
+        .limit(30);
 
-      // Sort by relevance: more word matches = higher rank
-      const sorted = (data || []).sort((a, b) => {
-        const scoreA = words.reduce((s, w) => {
-          const nameMatch = a.name.toLowerCase().includes(w) ? 2 : 0;
-          const descMatch = (a.description || '').toLowerCase().includes(w) ? 1 : 0;
-          return s + nameMatch + descMatch;
-        }, 0);
-        const scoreB = words.reduce((s, w) => {
-          const nameMatch = b.name.toLowerCase().includes(w) ? 2 : 0;
-          const descMatch = (b.description || '').toLowerCase().includes(w) ? 1 : 0;
-          return s + nameMatch + descMatch;
-        }, 0);
+      // 3) Si hay categorías coincidentes, buscar productos de esas categorías
+      let categoryResults: Product[] = [];
+      if (matchedCategoryIds.length > 0) {
+        const { data: catProducts } = await supabaseClient
+          .from('products')
+          .select('id, name, price, image_url, slug, description, on_offer, offer_price, offer_percentage, category_ids')
+          .eq('active', true)
+          .overlaps('category_ids', matchedCategoryIds)
+          .limit(30);
+        categoryResults = catProducts || [];
+      }
+
+      // 4) Combinar resultados eliminando duplicados
+      const allResults = [...(textResults || [])];
+      const existingIds = new Set(allResults.map(p => p.id));
+      for (const p of categoryResults) {
+        if (!existingIds.has(p.id)) {
+          allResults.push(p);
+          existingIds.add(p.id);
+        }
+      }
+
+      // 5) Ordenar por relevancia
+      const sorted = allResults.sort((a, b) => {
+        let scoreA = 0, scoreB = 0;
+
+        // Puntos por coincidencia de texto en nombre/descripción
+        for (const w of words) {
+          if (a.name.toLowerCase().includes(w)) scoreA += 3;
+          if ((a.description || '').toLowerCase().includes(w)) scoreA += 1;
+          if (b.name.toLowerCase().includes(w)) scoreB += 3;
+          if ((b.description || '').toLowerCase().includes(w)) scoreB += 1;
+        }
+
+        // Puntos por pertenecer a una categoría coincidente
+        if (matchedCategoryIds.length > 0) {
+          const aCatIds = a.category_ids || [];
+          const bCatIds = b.category_ids || [];
+          if (aCatIds.some(id => matchedCategoryIds.includes(id))) scoreA += 2;
+          if (bCatIds.some(id => matchedCategoryIds.includes(id))) scoreB += 2;
+        }
+
         return scoreB - scoreA;
       });
 
-      setProducts(sorted);
+      setProducts(sorted.slice(0, 30));
     } catch (error) {
       console.error('Error searching products:', error);
       setProducts([]);
@@ -145,10 +200,31 @@ export default function SearchProducts() {
                   )}
                 </div>
                 <div className="p-4">
+                  {/* Categoría */}
+                  {product.category_ids && product.category_ids.length > 0 && (
+                    <p className="text-xs text-gray-400 mb-1">
+                      {product.category_ids
+                        .map(id => categories.find(c => c.id === id)?.name)
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  )}
                   <h3 className="font-semibold text-gray-900 group-hover:text-arena transition-colors">
                     {product.name}
                   </h3>
-                  <p className="text-arena font-bold mt-2">€{product.price.toFixed(2)}</p>
+                  {product.on_offer && product.offer_price ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-arena font-bold">€{product.offer_price.toFixed(2)}</span>
+                      <span className="text-sm text-gray-400 line-through">€{product.price.toFixed(2)}</span>
+                    </div>
+                  ) : product.on_offer && product.offer_percentage ? (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-arena font-bold">€{(product.price * (1 - product.offer_percentage / 100)).toFixed(2)}</span>
+                      <span className="text-sm text-gray-400 line-through">€{product.price.toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <p className="text-arena font-bold mt-2">€{product.price.toFixed(2)}</p>
+                  )}
                 </div>
               </a>
             ))}

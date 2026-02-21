@@ -20,11 +20,28 @@ export const GET: APIRoute = async ({ url }) => {
       );
     }
 
+    // 1) Buscar categorías que coincidan con el término de búsqueda
+    const { data: matchedCategories } = await supabaseAdminClient
+      .from('categories')
+      .select('id')
+      .or(`name.ilike.%${query}%,slug.ilike.%${query}%`);
+
+    const matchedCatIds = (matchedCategories || []).map((c: any) => c.id);
+
+    // 2) Buscar productos por texto O por categoría coincidente
     let dbQuery = supabaseAdminClient
       .from('products')
       .select('*', { count: 'exact' })
-      .eq('active', true)
-      .or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+      .eq('active', true);
+
+    if (matchedCatIds.length > 0) {
+      // Buscar por texto OR por categoría
+      dbQuery = dbQuery.or(
+        `name.ilike.%${query}%,description.ilike.%${query}%,category_ids.ov.{${matchedCatIds.join(',')}}`
+      );
+    } else {
+      dbQuery = dbQuery.or(`name.ilike.%${query}%,description.ilike.%${query}%`);
+    }
 
     if (categoryId) {
       dbQuery = dbQuery.contains('category_ids', [categoryId]);
