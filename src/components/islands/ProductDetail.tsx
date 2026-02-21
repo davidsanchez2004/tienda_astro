@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useStore } from '@nanostores/react';
 import type { Product } from '../../lib/types';
-import { getCart, saveCart } from '../../stores/useCart';
+import { $cartItems, getCart, saveCart } from '../../stores/useCart';
 
 interface ProductDetailProps {
   product: Product;
@@ -13,6 +14,8 @@ function generateId(): string {
 }
 
 export default function ProductDetail({ product, categoryNames }: ProductDetailProps) {
+  // Suscribirse al carrito para re-renderizar cuando cambie
+  const cartItems = useStore($cartItems);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
@@ -24,19 +27,20 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
   
   const inStock = product.stock > 0;
 
-  // Calcular cuántas unidades ya hay en el carrito de este producto
-  const getQtyInCart = (): number => {
-    try {
-      const cart = getCart();
-      const existing = cart.find((item: any) => item.product_id === product.id);
-      return existing ? existing.quantity : 0;
-    } catch { return 0; }
-  };
+  // Calcular cuántas unidades ya hay en el carrito de este producto (reactivo)
+  const qtyInCart = cartItems.find(i => i.product_id === product.id)?.quantity ?? 0;
 
   // Máximo que se puede seleccionar = stock - lo que ya está en el carrito
-  const getAvailableToAdd = (): number => {
-    return Math.max(0, product.stock - getQtyInCart());
-  };
+  const availableToAdd = Math.max(0, product.stock - qtyInCart);
+
+  // Resetear quantity si excede el disponible
+  useEffect(() => {
+    if (quantity > availableToAdd && availableToAdd > 0) {
+      setQuantity(availableToAdd);
+    } else if (availableToAdd === 0 && quantity > 1) {
+      setQuantity(1);
+    }
+  }, [availableToAdd]);
 
   // Calculate final price
   const price = product.on_offer && product.offer_price 
@@ -69,11 +73,15 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
       }
       setStockError('');
       
+      let newCart: typeof cart;
       if (existingIndex >= 0) {
-        cart[existingIndex].quantity += quantity;
-        cart[existingIndex].stock = product.stock;
+        newCart = cart.map((item, i) =>
+          i === existingIndex
+            ? { ...item, quantity: item.quantity + quantity, stock: product.stock }
+            : item
+        );
       } else {
-        cart.push({
+        newCart = [...cart, {
           id: generateId(),
           product_id: product.id,
           name: product.name,
@@ -81,10 +89,10 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
           quantity,
           price,
           stock: product.stock
-        });
+        }];
       }
       
-      saveCart(cart);
+      saveCart(newCart);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
     } catch (error) {
@@ -207,61 +215,74 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
         {/* Add to Cart */}
         {inStock && (
           <div className="space-y-4 pt-4 border-t border-gray-200">
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-4">
-              <span className="text-gray-700 font-medium">Cantidad:</span>
-              <div className="flex items-center border border-arena-light rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-4 py-2 hover:bg-arena-pale transition-colors text-lg font-medium"
-                  disabled={loading}
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => {
-                    const available = getAvailableToAdd();
-                    setQuantity(Math.max(1, Math.min(available, parseInt(e.target.value) || 1)));
-                  }}
-                  className="w-16 text-center py-2 border-x border-arena-light text-lg"
-                  min="1"
-                  max={getAvailableToAdd()}
-                  disabled={loading}
-                />
-                <button
-                  onClick={() => setQuantity(Math.min(getAvailableToAdd(), quantity + 1))}
-                  className="px-4 py-2 hover:bg-arena-pale transition-colors text-lg font-medium"
-                  disabled={loading || quantity >= getAvailableToAdd()}
-                >
-                  +
-                </button>
-              </div>
-              {getQtyInCart() > 0 && (
-                <span className="text-xs text-amber-600">Ya tienes {getQtyInCart()} en el carrito</span>
-              )}
-            </div>
-
-            {/* Stock error */}
-            {stockError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {stockError}
+            {/* Info del carrito */}
+            {qtyInCart > 0 && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm">
+                Ya tienes {qtyInCart} de {product.stock} disponibles en el carrito
               </div>
             )}
 
-            {/* Add to Cart Button */}
-            <button
-              onClick={handleAddToCart}
-              disabled={loading}
-              className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
-                added
-                  ? 'bg-green-500 text-white'
-                  : 'bg-arena text-white hover:bg-arena-light'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {loading ? 'Agregando...' : added ? '¡Agregado al carrito!' : 'Agregar al carrito'}
-            </button>
+            {availableToAdd > 0 ? (
+              <>
+                {/* Quantity Selector */}
+                <div className="flex items-center gap-4">
+                  <span className="text-gray-700 font-medium">Cantidad:</span>
+                  <div className="flex items-center border border-arena-light rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="px-4 py-2 hover:bg-arena-pale transition-colors text-lg font-medium"
+                      disabled={loading || quantity <= 1}
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => {
+                        setQuantity(Math.max(1, Math.min(availableToAdd, parseInt(e.target.value) || 1)));
+                      }}
+                      className="w-16 text-center py-2 border-x border-arena-light text-lg"
+                      min="1"
+                      max={availableToAdd}
+                      disabled={loading}
+                    />
+                    <button
+                      onClick={() => setQuantity(Math.min(availableToAdd, quantity + 1))}
+                      className="px-4 py-2 hover:bg-arena-pale transition-colors text-lg font-medium"
+                      disabled={loading || quantity >= availableToAdd}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-xs text-gray-500">Máx. {availableToAdd}</span>
+                </div>
+
+                {/* Stock error */}
+                {stockError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    {stockError}
+                  </div>
+                )}
+
+                {/* Add to Cart Button */}
+                <button
+                  onClick={handleAddToCart}
+                  disabled={loading || availableToAdd <= 0}
+                  className={`w-full py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
+                    added
+                      ? 'bg-green-500 text-white'
+                      : 'bg-arena text-white hover:bg-arena-light'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {loading ? 'Agregando...' : added ? '¡Agregado al carrito!' : 'Agregar al carrito'}
+                </button>
+              </>
+            ) : (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                <p className="text-amber-700 font-semibold">Has alcanzado el máximo disponible</p>
+                <p className="text-amber-600 text-sm mt-1">Tienes {qtyInCart} de {product.stock} en el carrito</p>
+              </div>
+            )}
 
             {/* Continue Shopping */}
             <a

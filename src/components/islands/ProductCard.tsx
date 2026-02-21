@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { useStore } from '@nanostores/react';
 import type { Product } from '../../lib/types';
-import { getCart, saveCart } from '../../stores/useCart';
+import { $cartItems, getCart, saveCart } from '../../stores/useCart';
 
 interface ProductCardProps {
   product: Product;
@@ -12,10 +13,16 @@ function generateId(): string {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  // Suscribirse al carrito para re-renderizar cuando cambie
+  const cartItems = useStore($cartItems);
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
   const [stockError, setStockError] = useState('');
+
+  // Calcular cuántas unidades ya hay en el carrito de este producto
+  const qtyInCart = cartItems.find(i => i.product_id === product.id)?.quantity ?? 0;
+  const availableToAdd = Math.max(0, product.stock - qtyInCart);
 
   // Calculate final price
   const finalPrice = product.on_offer && product.offer_price 
@@ -52,11 +59,15 @@ export default function ProductCard({ product }: ProductCardProps) {
       }
       setStockError('');
       
+      let newCart: typeof cart;
       if (existingIndex >= 0) {
-        cart[existingIndex].quantity += quantity;
-        cart[existingIndex].stock = product.stock;
+        newCart = cart.map((item, i) =>
+          i === existingIndex
+            ? { ...item, quantity: item.quantity + quantity, stock: product.stock }
+            : item
+        );
       } else {
-        cart.push({
+        newCart = [...cart, {
           id: generateId(),
           product_id: product.id,
           name: product.name,
@@ -64,10 +75,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           quantity,
           price: finalPrice,
           stock: product.stock
-        });
+        }];
       }
       
-      saveCart(cart);
+      saveCart(newCart);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
       setQuantity(1);
@@ -81,14 +92,6 @@ export default function ProductCard({ product }: ProductCardProps) {
   const handleQuantityChange = (e: React.MouseEvent, delta: number) => {
     e.preventDefault();
     e.stopPropagation();
-    // Calcular cuántas unidades ya hay en el carrito
-    let qtyInCart = 0;
-    try {
-      const cart = getCart();
-      const existing = cart.find((item: any) => item.product_id === product.id);
-      if (existing) qtyInCart = existing.quantity;
-    } catch {}
-    const availableToAdd = Math.max(0, product.stock - qtyInCart);
     const newQty = quantity + delta;
     if (newQty >= 1 && newQty <= availableToAdd) {
       setQuantity(newQty);
@@ -162,53 +165,61 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Add to cart - always at bottom */}
         {inStock ? (
           <div className="space-y-2 mt-auto">
-            {/* Quantity selector */}
-            <div className="flex items-center justify-center gap-1">
-              <button
-                type="button"
-                onClick={(e) => handleQuantityChange(e, -1)}
-                className="w-10 h-10 flex items-center justify-center border border-arena-light rounded hover:bg-arena-pale transition-colors text-lg"
-                disabled={loading || quantity <= 1}
-              >
-                −
-              </button>
-              <span className="w-12 text-center font-medium">{quantity}</span>
-              <button
-                type="button"
-                onClick={(e) => handleQuantityChange(e, 1)}
-                className="w-10 h-10 flex items-center justify-center border border-arena-light rounded hover:bg-arena-pale transition-colors text-lg"
-                disabled={loading || (() => {
-                  let qtyInCart = 0;
-                  try {
-                    const cart = getCart();
-                    const existing = cart.find((item: any) => item.product_id === product.id);
-                    if (existing) qtyInCart = existing.quantity;
-                  } catch {}
-                  return quantity >= (product.stock - qtyInCart);
-                })()}
-              >
-                +
-              </button>
-            </div>
-
-            {/* Stock error */}
-            {stockError && (
-              <p className="text-xs text-red-600 text-center">{stockError}</p>
+            {/* Info del carrito */}
+            {qtyInCart > 0 && (
+              <p className="text-xs text-amber-600 text-center">Ya tienes {qtyInCart} en el carrito</p>
             )}
 
-            {/* Add button */}
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={loading}
-              className={`w-full py-3 px-4 rounded-lg font-semibold transition-all text-sm ${
-                added
-                  ? 'bg-green-500 text-white'
-                  : 'bg-arena text-white hover:bg-arena-light'
-              } disabled:opacity-50`}
-            >
-              {loading ? 'Agregando...' : added ? '¡Agregado!' : 'Añadir al carrito'}
-            </button>
+            {availableToAdd > 0 ? (
+              <>
+                {/* Quantity selector */}
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    type="button"
+                    onClick={(e) => handleQuantityChange(e, -1)}
+                    className="w-10 h-10 flex items-center justify-center border border-arena-light rounded hover:bg-arena-pale transition-colors text-lg"
+                    disabled={loading || quantity <= 1}
+                  >
+                    −
+                  </button>
+                  <span className="w-12 text-center font-medium">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => handleQuantityChange(e, 1)}
+                    className="w-10 h-10 flex items-center justify-center border border-arena-light rounded hover:bg-arena-pale transition-colors text-lg"
+                    disabled={loading || quantity >= availableToAdd}
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Stock error */}
+                {stockError && (
+                  <p className="text-xs text-red-600 text-center">{stockError}</p>
+                )}
+
+                {/* Add button */}
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={loading || availableToAdd <= 0}
+                  className={`w-full py-3 px-4 rounded-lg font-semibold transition-all text-sm ${
+                    added
+                      ? 'bg-green-500 text-white'
+                      : 'bg-arena text-white hover:bg-arena-light'
+                  } disabled:opacity-50`}
+                >
+                  {loading ? 'Agregando...' : added ? '¡Agregado!' : 'Añadir al carrito'}
+                </button>
+              </>
+            ) : (
+              <button 
+                disabled 
+                className="w-full py-3 px-4 rounded-lg font-semibold bg-amber-100 text-amber-700 cursor-not-allowed"
+              >
+                Máximo en carrito
+              </button>
+            )}
           </div>
         ) : (
           <button 

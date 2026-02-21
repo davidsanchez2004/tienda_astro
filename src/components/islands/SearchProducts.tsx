@@ -6,8 +6,8 @@ interface Product {
   name: string;
   price: number;
   image_url: string;
-  slug: string;
   description: string;
+  stock: number;
   on_offer?: boolean;
   offer_price?: number;
   offer_percentage?: number;
@@ -60,22 +60,24 @@ export default function SearchProducts() {
         .map(w => `name.ilike.%${w}%,description.ilike.%${w}%`)
         .join(',');
 
-      const { data: textResults } = await supabaseClient
+      const { data: textResults, error: textError } = await supabaseClient
         .from('products')
-        .select('id, name, price, image_url, slug, description, on_offer, offer_price, offer_percentage, category_ids')
+        .select('id, name, price, image_url, description, stock, on_offer, offer_price, offer_percentage, category_ids')
         .eq('active', true)
         .or(orFilters)
         .limit(30);
+      if (textError) console.error('Search text error:', textError);
 
       // 3) Si hay categorías coincidentes, buscar productos de esas categorías
       let categoryResults: Product[] = [];
       if (matchedCategoryIds.length > 0) {
-        const { data: catProducts } = await supabaseClient
+        const { data: catProducts, error: catError } = await supabaseClient
           .from('products')
-          .select('id, name, price, image_url, slug, description, on_offer, offer_price, offer_percentage, category_ids')
+          .select('id, name, price, image_url, description, stock, on_offer, offer_price, offer_percentage, category_ids')
           .eq('active', true)
           .overlaps('category_ids', matchedCategoryIds)
           .limit(30);
+        if (catError) console.error('Search category error:', catError);
         categoryResults = catProducts || [];
       }
 
@@ -181,7 +183,7 @@ export default function SearchProducts() {
             {products.map((product) => (
               <a
                 key={product.id}
-                href={`/producto/${product.slug}`}
+                href={`/producto/${product.id}`}
                 className="group bg-white rounded-xl border border-arena-light overflow-hidden hover:shadow-lg transition-shadow"
               >
                 <div className="aspect-square bg-arena-pale">

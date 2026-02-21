@@ -125,9 +125,9 @@ function persistCart(): void {
 // API PÚBLICA
 // ============================================
 
-/** Obtiene los items actuales del carrito */
+/** Obtiene los items actuales del carrito (copia defensiva) */
 export function getCart(): CartItem[] {
-  return $cartItems.get();
+  return [...$cartItems.get()];
 }
 
 /** Obtiene el conteo total de items */
@@ -140,9 +140,9 @@ export function getCartTotal(): number {
   return $cartTotal.get();
 }
 
-/** Guarda items en el carrito (reemplaza todo) */
+/** Guarda items en el carrito (siempre crea nueva referencia para React) */
 export function saveCart(items: CartItem[]): void {
-  $cartItems.set(items);
+  $cartItems.set([...items]);
   persistCart();
 }
 
