@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useStore } from '@nanostores/react';
 import { supabaseClient } from '../../lib/supabase';
-import { getCart, saveCart, type CartItem } from '../../stores/useCart';
+import { $cartItems, saveCart, type CartItem } from '../../stores/useCart';
 
 export default function CartDisplay() {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const cart = useStore($cartItems);
   const [isClient, setIsClient] = useState(false);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
@@ -14,10 +15,15 @@ export default function CartDisplay() {
     // Limpiar clave antigua del carrito si existe
     try { localStorage.removeItem('by_arena_cart'); } catch {}
     
-    const loadedCart = getCart();
-    setCart(loadedCart);
-    fetchStock(loadedCart);
+    fetchStock(cart);
   }, []);
+
+  // Re-fetch stock when cart items change
+  useEffect(() => {
+    if (isClient && cart.length > 0) {
+      fetchStock(cart);
+    }
+  }, [cart.length]);
 
   async function fetchStock(items: CartItem[]) {
     if (items.length === 0) return;
@@ -33,20 +39,6 @@ export default function CartDisplay() {
     }
   }
 
-  // Listen for cart updates from other components
-  useEffect(() => {
-    const handleCartUpdate = () => {
-      setCart(getCart());
-    };
-
-    window.addEventListener('cart-updated', handleCartUpdate);
-    window.addEventListener('storage', handleCartUpdate);
-    return () => {
-      window.removeEventListener('cart-updated', handleCartUpdate);
-      window.removeEventListener('storage', handleCartUpdate);
-    };
-  }, []);
-
   const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(itemId);
@@ -59,13 +51,11 @@ export default function CartDisplay() {
     const newCart = cart.map(i =>
       i.id === itemId ? { ...i, quantity: cappedQty } : i
     );
-    setCart(newCart);
     saveCart(newCart);
   };
 
   const removeFromCart = (itemId: string) => {
     const newCart = cart.filter(item => item.id !== itemId);
-    setCart(newCart);
     saveCart(newCart);
   };
 

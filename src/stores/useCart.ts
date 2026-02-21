@@ -1,5 +1,9 @@
 /**
- * SISTEMA DE CARRITO - BY ARENA
+ * NANOSTORE DEL CARRITO - BY ARENA
+ * 
+ * Fuente de verdad reactiva para el estado del carrito.
+ * Usa nanostores para que todos los componentes (Astro, React, etc.)
+ * se actualicen automáticamente cuando cambia el carrito.
  * 
  * REGLAS:
  * - Invitado: usa key "guest_cart" en sessionStorage (se borra al cerrar pestaña/navegador)
@@ -7,6 +11,12 @@
  * - Login: se limpia guest_cart, se carga user_cart_<userId>
  * - Logout: se elimina referencia al usuario, se usa guest_cart (vacío)
  */
+
+import { atom, computed } from 'nanostores';
+
+// ============================================
+// TIPOS
+// ============================================
 
 export interface CartItem {
   id: string;
@@ -17,27 +27,41 @@ export interface CartItem {
   price: number;
 }
 
-// Key para guardar el userId actual
+// ============================================
+// ATOMS (estado reactivo)
+// ============================================
+
+/** Lista de items del carrito - fuente de verdad */
+export const $cartItems = atom<CartItem[]>([]);
+
+/** Computed: número total de unidades en el carrito */
+export const $cartCount = computed($cartItems, (items) =>
+  items.reduce((sum, item) => sum + item.quantity, 0)
+);
+
+/** Computed: precio total del carrito */
+export const $cartTotal = computed($cartItems, (items) =>
+  items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+);
+
+// ============================================
+// CONSTANTES
+// ============================================
+
 const CURRENT_USER_KEY = 'by_arena_auth_user_id';
+const SESSION_FLAG = 'by_arena_session_active';
 
 // ============================================
-// FUNCIONES DE GESTIÓN DE USUARIO
+// FUNCIONES INTERNAS DE STORAGE
 // ============================================
 
-/**
- * Obtiene el userId guardado en localStorage
- */
 function getStoredUserId(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(CURRENT_USER_KEY);
 }
 
-/**
- * Guarda o elimina el userId en localStorage
- */
 function setStoredUserId(userId: string | null): void {
   if (typeof window === 'undefined') return;
-  
   if (userId) {
     localStorage.setItem(CURRENT_USER_KEY, userId);
   } else {
@@ -45,218 +69,135 @@ function setStoredUserId(userId: string | null): void {
   }
 }
 
-// ============================================
-// FUNCIONES DE KEY DEL CARRITO
-// ============================================
-
-/**
- * Devuelve la key del carrito según el estado de autenticación
- * - Si hay userId → "user_cart_<userId>"
- * - Si no hay userId → "guest_cart"
- */
-function getCartKey(): string {
-  const userId = getStoredUserId();
-  
-  if (userId) {
-    return `user_cart_${userId}`;
-  }
-  
-  return 'guest_cart';
-}
-
-/**
- * Determina si el carrito actual es de invitado
- */
 function isGuestCart(): boolean {
   return !getStoredUserId();
 }
 
-/**
- * Obtiene el storage apropiado según el tipo de carrito:
- * - Invitado → sessionStorage (se borra al cerrar pestaña/navegador)
- * - Usuario autenticado → localStorage (persiste entre sesiones)
- */
+function getCartKey(): string {
+  const userId = getStoredUserId();
+  return userId ? `user_cart_${userId}` : 'guest_cart';
+}
+
 function getCartStorage(): Storage {
-  if (typeof window === 'undefined') return localStorage; // fallback SSR
+  if (typeof window === 'undefined') return localStorage;
   return isGuestCart() ? sessionStorage : localStorage;
 }
 
 // ============================================
-// OPERACIONES DEL CARRITO
+// LEER/ESCRIBIR STORAGE ↔ ATOM
 // ============================================
 
-/**
- * Obtiene los items del carrito actual
- */
-export function getCart(): CartItem[] {
-  if (typeof window === 'undefined') return [];
-  
+/** Lee del storage y sincroniza al atom */
+function loadCartFromStorage(): void {
+  if (typeof window === 'undefined') return;
   try {
     const key = getCartKey();
     const storage = getCartStorage();
     const data = storage.getItem(key);
-    
-    if (!data) return [];
-    
+    if (!data) {
+      $cartItems.set([]);
+      return;
+    }
     const items = JSON.parse(data);
-    return Array.isArray(items) ? items : [];
-  } catch (error) {
-    console.error('[Cart] Error reading cart:', error);
-    return [];
+    $cartItems.set(Array.isArray(items) ? items : []);
+  } catch {
+    $cartItems.set([]);
   }
 }
 
-/**
- * Guarda los items en el carrito actual
- */
-export function saveCart(items: CartItem[]): void {
+/** Persiste el atom actual al storage */
+function persistCart(): void {
   if (typeof window === 'undefined') return;
-  
   const key = getCartKey();
   const storage = getCartStorage();
-  storage.setItem(key, JSON.stringify(items));
-  
-  // Notificar a todos los componentes
+  const items = $cartItems.get();
+  if (items.length === 0) {
+    storage.removeItem(key);
+  } else {
+    storage.setItem(key, JSON.stringify(items));
+  }
+  // Evento legacy para compatibilidad con componentes que aún escuchen
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: items }));
 }
 
-/**
- * Limpia el carrito actual
- */
+// ============================================
+// API PÚBLICA
+// ============================================
+
+/** Obtiene los items actuales del carrito */
+export function getCart(): CartItem[] {
+  return $cartItems.get();
+}
+
+/** Obtiene el conteo total de items */
+export function getCartCount(): number {
+  return $cartCount.get();
+}
+
+/** Obtiene el total en precio */
+export function getCartTotal(): number {
+  return $cartTotal.get();
+}
+
+/** Guarda items en el carrito (reemplaza todo) */
+export function saveCart(items: CartItem[]): void {
+  $cartItems.set(items);
+  persistCart();
+}
+
+/** Limpia el carrito actual */
 export function clearCart(): void {
   if (typeof window === 'undefined') return;
-  
   const key = getCartKey();
   const storage = getCartStorage();
   storage.removeItem(key);
-  
+  $cartItems.set([]);
   window.dispatchEvent(new CustomEvent('cart-updated', { detail: [] }));
 }
 
 // ============================================
-// GESTIÓN DE SESIÓN (LOGIN/LOGOUT)
+// GESTIÓN DE SESIÓN
 // ============================================
 
-/**
- * LLAMAR cuando el usuario inicia sesión o se detecta una sesión existente
- */
 export function onUserLogin(userId: string): void {
   if (typeof window === 'undefined') return;
-  
   console.log('[Cart] User login:', userId);
-  
-  // 1. Limpiar el carrito de invitado (NO se transfiere)
   sessionStorage.removeItem('guest_cart');
-  
-  // 2. Guardar el nuevo userId
   setStoredUserId(userId);
-  
-  // 3. Cargar el carrito del usuario (puede estar vacío)
-  const userCart = getCart();
-  
-  // 4. Notificar el cambio
-  window.dispatchEvent(new CustomEvent('cart-updated', { detail: userCart }));
+  loadCartFromStorage();
 }
 
-/**
- * LLAMAR cuando el usuario cierra sesión
- */
 export function onUserLogout(): void {
   if (typeof window === 'undefined') return;
-  
   console.log('[Cart] User logout');
-  
-  // 1. Eliminar el userId (el carrito del usuario queda en localStorage para cuando vuelva)
   setStoredUserId(null);
-  
-  // 2. El carrito ahora es guest_cart (vacío si no existía)
-  const guestCart = getCart();
-  
-  // 3. Notificar el cambio
-  window.dispatchEvent(new CustomEvent('cart-updated', { detail: guestCart }));
+  loadCartFromStorage();
 }
 
-/**
- * LLAMAR desde AuthContext para sincronizar el estado
- * Esta función decide si hacer login o logout según el userId
- */
 export function handleSessionChange(userId: string | null): void {
   if (typeof window === 'undefined') return;
-  
   const currentStoredUserId = getStoredUserId();
-  
-  // Caso 1: Usuario hace login (pasa de null a userId)
+
   if (userId && !currentStoredUserId) {
     onUserLogin(userId);
     return;
   }
-  
-  // Caso 2: Usuario hace logout (pasa de userId a null)
   if (!userId && currentStoredUserId) {
     onUserLogout();
     return;
   }
-  
-  // Caso 3: Cambio de usuario (raro pero posible)
   if (userId && currentStoredUserId && userId !== currentStoredUserId) {
-    // Logout del usuario anterior, login del nuevo
     setStoredUserId(null);
     onUserLogin(userId);
     return;
   }
-  
-  // Caso 4: Sin cambio real, solo refrescar
-  const cart = getCart();
-  window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+  // Sin cambio real, solo refrescar
+  loadCartFromStorage();
 }
 
 // ============================================
-// AUTO-LIMPIEZA DEL CARRITO DE INVITADO
+// HELPER HOOK (compatibilidad)
 // ============================================
-
-/**
- * Configura la limpieza automática del carrito de invitado al cerrar
- * la pestaña o el navegador. Esto refuerza sessionStorage en navegadores
- * que restauran pestañas al reiniciar (Chrome, Edge, etc.).
- */
-function setupGuestCartCleanup(): void {
-  if (typeof window === 'undefined') return;
-
-  // Limpiar cualquier guest_cart residual en localStorage (migración de versiones anteriores)
-  localStorage.removeItem('guest_cart');
-
-  // Marcamos que la sesión está activa con una flag temporal
-  const SESSION_FLAG = 'by_arena_session_active';
-
-  // Si la flag NO existe, es una nueva sesión → limpiar carrito de invitado
-  if (!sessionStorage.getItem(SESSION_FLAG)) {
-    sessionStorage.removeItem('guest_cart');
-    sessionStorage.setItem(SESSION_FLAG, '1');
-  }
-
-  // Al cerrar la pestaña/navegador, limpiar el carrito de invitado
-  window.addEventListener('beforeunload', () => {
-    if (isGuestCart()) {
-      sessionStorage.removeItem('guest_cart');
-      sessionStorage.removeItem(SESSION_FLAG);
-    }
-  });
-}
-
-// Ejecutar limpieza al cargar el módulo
-setupGuestCartCleanup();
-
-// ============================================
-// UTILIDADES
-// ============================================
-
-export function getCartTotal(): number {
-  return getCart().reduce((sum, item) => sum + (item.price * item.quantity), 0);
-}
-
-export function getCartCount(): number {
-  return getCart().reduce((sum, item) => sum + item.quantity, 0);
-}
 
 export function useCart() {
   return {
@@ -265,43 +206,59 @@ export function useCart() {
     count: getCartCount(),
     clearCart,
     getCart,
-    saveCart
+    saveCart,
   };
 }
 
-/**
- * DEBUG: Ejecutar en consola del navegador para ver el estado
- */
-export function debugCart(): void {
-  if (typeof window === 'undefined') {
-    console.log('SSR - no cart');
-    return;
+// ============================================
+// AUTO-LIMPIEZA + INICIALIZACIÓN
+// ============================================
+
+function init(): void {
+  if (typeof window === 'undefined') return;
+
+  // Migración: limpiar guest_cart de localStorage si quedó de versiones anteriores
+  localStorage.removeItem('guest_cart');
+
+  // Si la flag de sesión NO existe → nueva sesión → limpiar carrito invitado
+  if (!sessionStorage.getItem(SESSION_FLAG)) {
+    sessionStorage.removeItem('guest_cart');
+    sessionStorage.setItem(SESSION_FLAG, '1');
   }
-  
+
+  // Al cerrar pestaña/navegador, limpiar carrito de invitado
+  window.addEventListener('beforeunload', () => {
+    if (isGuestCart()) {
+      sessionStorage.removeItem('guest_cart');
+      sessionStorage.removeItem(SESSION_FLAG);
+    }
+  });
+
+  // Cargar carrito inicial desde storage al atom
+  loadCartFromStorage();
+}
+
+init();
+
+// ============================================
+// DEBUG
+// ============================================
+
+export function debugCart(): void {
+  if (typeof window === 'undefined') { console.log('SSR - no cart'); return; }
   const userId = getStoredUserId();
-  const cartKey = getCartKey();
-  const cartItems = getCart();
-  
   console.log('╔══════════════════════════════════════╗');
   console.log('║        CART DEBUG - BY ARENA         ║');
   console.log('╠══════════════════════════════════════╣');
   console.log('║ Stored User ID:', userId || '(none - guest)');
-  console.log('║ Active Cart Key:', cartKey);
-  console.log('║ Cart Items:', cartItems.length);
-  console.log('║ Items:', cartItems);
+  console.log('║ Active Cart Key:', getCartKey());
+  console.log('║ Cart Items (atom):', $cartItems.get().length);
+  console.log('║ Cart Count (computed):', $cartCount.get());
+  console.log('║ Cart Total (computed):', $cartTotal.get());
+  console.log('║ Items:', $cartItems.get());
   console.log('╠══════════════════════════════════════╣');
-  console.log('║ All cart keys in localStorage:');
-  
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (key.includes('cart') || key.includes('user'))) {
-      console.log('║   -', key, ':', localStorage.getItem(key)?.substring(0, 50));
-    }
-  }
-  
   console.log('║ Guest cart in sessionStorage:');
   const guestData = sessionStorage.getItem('guest_cart');
   console.log('║   - guest_cart:', guestData ? guestData.substring(0, 50) : '(empty)');
-  
   console.log('╚══════════════════════════════════════╝');
 }

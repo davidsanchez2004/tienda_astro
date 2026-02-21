@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getCart, getCartTotal, clearCart, type CartItem } from '../../stores/useCart';
+import { useStore } from '@nanostores/react';
+import { $cartItems, $cartTotal, clearCart, type CartItem } from '../../stores/useCart';
 import { supabaseClient } from '../../lib/supabase';
 
 // Get shipping method from localStorage
@@ -15,8 +16,8 @@ function saveShippingMethod(method: 'delivery' | 'pickup') {
 }
 
 export default function CheckoutMode() {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const cart = useStore($cartItems);
+  const total = useStore($cartTotal);
   const [isClient, setIsClient] = useState(false);
   const [step, setStep] = useState<'summary' | 'form'>('summary');
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
@@ -52,8 +53,6 @@ export default function CheckoutMode() {
 
   useEffect(() => {
     setIsClient(true);
-    setCart(getCart());
-    setTotal(getCartTotal());
     setShippingMethod(getShippingMethod());
     
     // Cargar datos del usuario logueado
@@ -85,24 +84,7 @@ export default function CheckoutMode() {
     loadUserData();
   }, []);
 
-  // Escuchar cambios en el carrito (por cambio de sesión)
-  useEffect(() => {
-    const handleCartUpdate = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      if (customEvent.detail !== undefined) {
-        setCart(customEvent.detail);
-        setTotal(customEvent.detail.reduce((sum: number, item: CartItem) => sum + (item.price * item.quantity), 0));
-      } else {
-        setCart(getCart());
-        setTotal(getCartTotal());
-      }
-    };
 
-    window.addEventListener('cart-updated', handleCartUpdate);
-    return () => {
-      window.removeEventListener('cart-updated', handleCartUpdate);
-    };
-  }, []);
 
   // Save shipping method when it changes
   useEffect(() => {
