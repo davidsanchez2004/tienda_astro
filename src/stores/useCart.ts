@@ -6,7 +6,8 @@
  * se actualicen automáticamente cuando cambia el carrito.
  * 
  * REGLAS:
- * - Invitado: usa key "guest_cart" en sessionStorage (se borra al cerrar pestaña/navegador)
+ * - Invitado: usa key "guest_cart" en localStorage (persiste entre páginas)
+ *   Se borra al iniciar una nueva sesión de navegador (detectado via sessionStorage flag)
  * - Usuario: usa key "user_cart_<userId>" en localStorage (persiste entre sesiones)
  * - Login: se limpia guest_cart, se carga user_cart_<userId>
  * - Logout: se elimina referencia al usuario, se usa guest_cart (vacío)
@@ -80,8 +81,8 @@ function getCartKey(): string {
 }
 
 function getCartStorage(): Storage {
-  if (typeof window === 'undefined') return localStorage;
-  return isGuestCart() ? sessionStorage : localStorage;
+  // Siempre localStorage: guest_cart se limpia al iniciar nueva sesión de navegador
+  return localStorage;
 }
 
 // ============================================
@@ -163,7 +164,7 @@ export function clearCart(): void {
 export function onUserLogin(userId: string): void {
   if (typeof window === 'undefined') return;
   console.log('[Cart] User login:', userId);
-  sessionStorage.removeItem('guest_cart');
+  localStorage.removeItem('guest_cart');
   setStoredUserId(userId);
   loadCartFromStorage();
 }
@@ -218,22 +219,16 @@ export function useCart() {
 function init(): void {
   if (typeof window === 'undefined') return;
 
-  // Migración: limpiar guest_cart de localStorage si quedó de versiones anteriores
-  localStorage.removeItem('guest_cart');
-
-  // Si la flag de sesión NO existe → nueva sesión → limpiar carrito invitado
+  // Detección de nueva sesión de navegador:
+  // sessionStorage se borra al cerrar pestaña/navegador.
+  // Si la flag NO existe → nueva sesión → limpiar carrito invitado de localStorage.
   if (!sessionStorage.getItem(SESSION_FLAG)) {
-    sessionStorage.removeItem('guest_cart');
+    // Nueva sesión: limpiar carrito de invitado
+    if (isGuestCart()) {
+      localStorage.removeItem('guest_cart');
+    }
     sessionStorage.setItem(SESSION_FLAG, '1');
   }
-
-  // Al cerrar pestaña/navegador, limpiar carrito de invitado
-  window.addEventListener('beforeunload', () => {
-    if (isGuestCart()) {
-      sessionStorage.removeItem('guest_cart');
-      sessionStorage.removeItem(SESSION_FLAG);
-    }
-  });
 
   // Cargar carrito inicial desde storage al atom
   loadCartFromStorage();
@@ -258,8 +253,8 @@ export function debugCart(): void {
   console.log('║ Cart Total (computed):', $cartTotal.get());
   console.log('║ Items:', $cartItems.get());
   console.log('╠══════════════════════════════════════╣');
-  console.log('║ Guest cart in sessionStorage:');
-  const guestData = sessionStorage.getItem('guest_cart');
+  console.log('║ Guest cart in localStorage:');
+  const guestData = localStorage.getItem('guest_cart');
   console.log('║   - guest_cart:', guestData ? guestData.substring(0, 50) : '(empty)');
   console.log('╚══════════════════════════════════════╝');
 }
