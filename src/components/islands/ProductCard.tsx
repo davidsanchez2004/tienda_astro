@@ -81,8 +81,16 @@ export default function ProductCard({ product }: ProductCardProps) {
   const handleQuantityChange = (e: React.MouseEvent, delta: number) => {
     e.preventDefault();
     e.stopPropagation();
+    // Calcular cuántas unidades ya hay en el carrito
+    let qtyInCart = 0;
+    try {
+      const cart = getCart();
+      const existing = cart.find((item: any) => item.product_id === product.id);
+      if (existing) qtyInCart = existing.quantity;
+    } catch {}
+    const availableToAdd = Math.max(0, product.stock - qtyInCart);
     const newQty = quantity + delta;
-    if (newQty >= 1 && newQty <= product.stock) {
+    if (newQty >= 1 && newQty <= availableToAdd) {
       setQuantity(newQty);
     }
   };
@@ -169,7 +177,15 @@ export default function ProductCard({ product }: ProductCardProps) {
                 type="button"
                 onClick={(e) => handleQuantityChange(e, 1)}
                 className="w-10 h-10 flex items-center justify-center border border-arena-light rounded hover:bg-arena-pale transition-colors text-lg"
-                disabled={loading || quantity >= product.stock}
+                disabled={loading || (() => {
+                  let qtyInCart = 0;
+                  try {
+                    const cart = getCart();
+                    const existing = cart.find((item: any) => item.product_id === product.id);
+                    if (existing) qtyInCart = existing.quantity;
+                  } catch {}
+                  return quantity >= (product.stock - qtyInCart);
+                })()}
               >
                 +
               </button>

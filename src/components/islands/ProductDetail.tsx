@@ -24,6 +24,20 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
   
   const inStock = product.stock > 0;
 
+  // Calcular cuántas unidades ya hay en el carrito de este producto
+  const getQtyInCart = (): number => {
+    try {
+      const cart = getCart();
+      const existing = cart.find((item: any) => item.product_id === product.id);
+      return existing ? existing.quantity : 0;
+    } catch { return 0; }
+  };
+
+  // Máximo que se puede seleccionar = stock - lo que ya está en el carrito
+  const getAvailableToAdd = (): number => {
+    return Math.max(0, product.stock - getQtyInCart());
+  };
+
   // Calculate final price
   const price = product.on_offer && product.offer_price 
     ? product.offer_price 
@@ -207,20 +221,26 @@ export default function ProductDetail({ product, categoryNames }: ProductDetailP
                 <input
                   type="number"
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(product.stock, parseInt(e.target.value) || 1)))}
+                  onChange={(e) => {
+                    const available = getAvailableToAdd();
+                    setQuantity(Math.max(1, Math.min(available, parseInt(e.target.value) || 1)));
+                  }}
                   className="w-16 text-center py-2 border-x border-arena-light text-lg"
                   min="1"
-                  max={product.stock}
+                  max={getAvailableToAdd()}
                   disabled={loading}
                 />
                 <button
-                  onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                  onClick={() => setQuantity(Math.min(getAvailableToAdd(), quantity + 1))}
                   className="px-4 py-2 hover:bg-arena-pale transition-colors text-lg font-medium"
-                  disabled={loading}
+                  disabled={loading || quantity >= getAvailableToAdd()}
                 >
                   +
                 </button>
               </div>
+              {getQtyInCart() > 0 && (
+                <span className="text-xs text-amber-600">Ya tienes {getQtyInCart()} en el carrito</span>
+              )}
             </div>
 
             {/* Stock error */}

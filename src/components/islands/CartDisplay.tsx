@@ -7,6 +7,7 @@ export default function CartDisplay() {
   const cart = useStore($cartItems);
   const [isClient, setIsClient] = useState(false);
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
+  const [stockLoaded, setStockLoaded] = useState(false);
 
   // Load cart and fetch stock for each product
   useEffect(() => {
@@ -14,16 +15,18 @@ export default function CartDisplay() {
     
     // Limpiar clave antigua del carrito si existe
     try { localStorage.removeItem('by_arena_cart'); } catch {}
-    
-    fetchStock(cart);
   }, []);
 
-  // Re-fetch stock when cart items change
+  // Fetch stock siempre que cambie el carrito (items o cantidades)
   useEffect(() => {
     if (isClient && cart.length > 0) {
       fetchStock(cart);
     }
-  }, [cart.length]);
+    if (isClient && cart.length === 0) {
+      setStockMap({});
+      setStockLoaded(true);
+    }
+  }, [isClient, cart]);
 
   async function fetchStock(items: CartItem[]) {
     if (items.length === 0) return;
@@ -36,12 +39,34 @@ export default function CartDisplay() {
       const map: Record<string, number> = {};
       data.forEach((p: any) => { map[p.id] = p.stock; });
       setStockMap(map);
+
+      // Actualizar el stock guardado en cada item del carrito
+      const updatedCart = items.map(item => ({
+        ...item,
+        stock: map[item.product_id] ?? item.stock ?? 0
+      }));
+      // Si algún item tiene cantidad superior al stock real, caparlo
+      let needsUpdate = false;
+      const cappedCart = updatedCart.map(item => {
+        const maxStock = map[item.product_id] ?? item.stock ?? 0;
+        if (item.quantity > maxStock && maxStock > 0) {
+          needsUpdate = true;
+          return { ...item, quantity: maxStock };
+        }
+        return item;
+      });
+      if (needsUpdate) {
+        saveCart(cappedCart);
+      }
     }
+    setStockLoaded(true);
   }
 
   const getMaxStock = (item: CartItem): number => {
-    // Prioridad: stock fresco de Supabase > stock guardado en el item
-    return stockMap[item.product_id] ?? item.stock ?? 999;
+    // Prioridad: stock fresco de Supabase > stock guardado en el item > 0 (no infinito)
+    if (stockMap[item.product_id] !== undefined) return stockMap[item.product_id];
+    if (item.stock !== undefined && item.stock !== null) return item.stock;
+    return 0; // Si no sabemos el stock, no permitir añadir más
   };
 
   const updateQuantity = (itemId: string, quantity: number) => {
@@ -130,13 +155,16 @@ export default function CartDisplay() {
                 <span className="w-8 text-center font-medium">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                  disabled={item.quantity >= getMaxStock(item)}
+                  disabled={!stockLoaded || item.quantity >= getMaxStock(item)}
                   className="px-3 py-1 border border-arena-light rounded hover:bg-arena-pale transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   +
                 </button>
-                {item.quantity >= getMaxStock(item) && (
-                  <span className="text-xs text-amber-600 ml-2">Máx. stock</span>
+                {stockLoaded && item.quantity >= getMaxStock(item) && (
+                  <span className="text-xs text-amber-600 ml-2">Máx. stock ({getMaxStock(item)})</span>
+                )}
+                {!stockLoaded && (
+                  <span className="text-xs text-gray-400 ml-2">Verificando stock...</span>
                 )}
               </div>
               <p className="text-sm font-semibold text-gray-900">
