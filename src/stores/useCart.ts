@@ -211,6 +211,42 @@ export function handleSessionChange(userId: string | null): void {
 }
 
 // ============================================
+// AUTO-LIMPIEZA DEL CARRITO DE INVITADO
+// ============================================
+
+/**
+ * Configura la limpieza automática del carrito de invitado al cerrar
+ * la pestaña o el navegador. Esto refuerza sessionStorage en navegadores
+ * que restauran pestañas al reiniciar (Chrome, Edge, etc.).
+ */
+function setupGuestCartCleanup(): void {
+  if (typeof window === 'undefined') return;
+
+  // Limpiar cualquier guest_cart residual en localStorage (migración de versiones anteriores)
+  localStorage.removeItem('guest_cart');
+
+  // Marcamos que la sesión está activa con una flag temporal
+  const SESSION_FLAG = 'by_arena_session_active';
+
+  // Si la flag NO existe, es una nueva sesión → limpiar carrito de invitado
+  if (!sessionStorage.getItem(SESSION_FLAG)) {
+    sessionStorage.removeItem('guest_cart');
+    sessionStorage.setItem(SESSION_FLAG, '1');
+  }
+
+  // Al cerrar la pestaña/navegador, limpiar el carrito de invitado
+  window.addEventListener('beforeunload', () => {
+    if (isGuestCart()) {
+      sessionStorage.removeItem('guest_cart');
+      sessionStorage.removeItem(SESSION_FLAG);
+    }
+  });
+}
+
+// Ejecutar limpieza al cargar el módulo
+setupGuestCartCleanup();
+
+// ============================================
 // UTILIDADES
 // ============================================
 
