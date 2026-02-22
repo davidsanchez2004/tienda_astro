@@ -72,11 +72,8 @@ const getPageUrl = (page: number) => buildUrl({ categoria: categorySlug, precio_
   <div class="bg-arena-pale py-12 border-b border-arena-light">
     <div class="max-w-7xl mx-auto px-4 md:px-8 lg:px-12">
       <h1 class="text-4xl font-serif font-bold text-gray-900">
-        {selectedCategory ? selectedCategory.name : 'Catálogo Completo'}
+        {selectedCategory ? selectedCategory.name : 'Catálogo'}
       </h1>
-      <p class="text-gray-600 mt-2">
-        {products?.length || 0} productos disponibles
-      </p>
     </div>
   </div>
 
