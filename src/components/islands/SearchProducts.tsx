@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabaseClient } from '../../lib/supabase-client';
 
 interface Product {
   id: string;
@@ -27,14 +26,15 @@ export default function SearchProducts() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  // Cargar categorías una vez al montar
+  // Cargar categorías una vez al montar (via API)
   useEffect(() => {
-    supabaseClient
-      .from('categories')
-      .select('id, name, slug')
-      .then(({ data }) => {
-        if (data) setCategories(data);
-      });
+    fetch('/api/products/categories')
+      .then(res => res.json())
+      .then(data => {
+        const cats = data?.categories || data;
+        if (Array.isArray(cats)) setCategories(cats);
+      })
+      .catch(err => console.error('Error loading categories:', err));
   }, []);
 
   const handleSearch = async (searchQuery: string) => {
@@ -48,73 +48,14 @@ export default function SearchProducts() {
     setSearched(true);
 
     try {
-      const words = searchQuery.trim().toLowerCase().split(/\s+/).filter(w => w.length > 1);
+      const res = await fetch(`/api/products/search?q=${encodeURIComponent(searchQuery.trim())}&limite=30`);
+      const data = await res.json();
 
-      // 1) Buscar categorías cuyos nombres coincidan con alguna palabra
-      const matchedCategoryIds = categories
-        .filter(cat => words.some(w => cat.name.toLowerCase().includes(w) || cat.slug.toLowerCase().includes(w)))
-        .map(cat => cat.id);
-
-      // 2) Buscar productos por nombre/descripción
-      const orFilters = words
-        .map(w => `name.ilike.%${w}%,description.ilike.%${w}%`)
-        .join(',');
-
-      const { data: textResults, error: textError } = await supabaseClient
-        .from('products')
-        .select('id, name, price, image_url, description, stock, on_offer, offer_price, offer_percentage, category_ids')
-        .eq('active', true)
-        .or(orFilters)
-        .limit(30);
-      if (textError) console.error('Search text error:', textError);
-
-      // 3) Si hay categorías coincidentes, buscar productos de esas categorías
-      let categoryResults: Product[] = [];
-      if (matchedCategoryIds.length > 0) {
-        const { data: catProducts, error: catError } = await supabaseClient
-          .from('products')
-          .select('id, name, price, image_url, description, stock, on_offer, offer_price, offer_percentage, category_ids')
-          .eq('active', true)
-          .overlaps('category_ids', matchedCategoryIds)
-          .limit(30);
-        if (catError) console.error('Search category error:', catError);
-        categoryResults = catProducts || [];
+      if (data.products && Array.isArray(data.products)) {
+        setProducts(data.products);
+      } else {
+        setProducts([]);
       }
-
-      // 4) Combinar resultados eliminando duplicados
-      const allResults = [...(textResults || [])];
-      const existingIds = new Set(allResults.map(p => p.id));
-      for (const p of categoryResults) {
-        if (!existingIds.has(p.id)) {
-          allResults.push(p);
-          existingIds.add(p.id);
-        }
-      }
-
-      // 5) Ordenar por relevancia
-      const sorted = allResults.sort((a, b) => {
-        let scoreA = 0, scoreB = 0;
-
-        // Puntos por coincidencia de texto en nombre/descripción
-        for (const w of words) {
-          if (a.name.toLowerCase().includes(w)) scoreA += 3;
-          if ((a.description || '').toLowerCase().includes(w)) scoreA += 1;
-          if (b.name.toLowerCase().includes(w)) scoreB += 3;
-          if ((b.description || '').toLowerCase().includes(w)) scoreB += 1;
-        }
-
-        // Puntos por pertenecer a una categoría coincidente
-        if (matchedCategoryIds.length > 0) {
-          const aCatIds = a.category_ids || [];
-          const bCatIds = b.category_ids || [];
-          if (aCatIds.some(id => matchedCategoryIds.includes(id))) scoreA += 2;
-          if (bCatIds.some(id => matchedCategoryIds.includes(id))) scoreB += 2;
-        }
-
-        return scoreB - scoreA;
-      });
-
-      setProducts(sorted.slice(0, 30));
     } catch (error) {
       console.error('Error searching products:', error);
       setProducts([]);
