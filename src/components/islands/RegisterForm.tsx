@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabaseClient } from '../../lib/supabase';
+import { supabaseClient } from '../../lib/supabase-client';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');

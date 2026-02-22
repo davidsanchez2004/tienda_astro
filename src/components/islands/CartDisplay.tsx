@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '@nanostores/react';
-import { supabaseClient } from '../../lib/supabase';
+import { supabaseClient } from '../../lib/supabase-client';
 import { $cartItems, saveCart, type CartItem } from '../../stores/useCart';
 
 export default function CartDisplay() {

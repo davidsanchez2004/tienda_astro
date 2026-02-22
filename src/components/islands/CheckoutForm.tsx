@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCart } from '../../stores/useCart';
-import { supabaseClient } from '../../lib/supabase';
+import { supabaseClient } from '../../lib/supabase-client';
 import { loadStripe } from '@stripe/stripe-js';
 
 interface User {

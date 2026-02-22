@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
 import { $cartItems, $cartTotal, clearCart, type CartItem } from '../../stores/useCart';
-import { supabaseClient } from '../../lib/supabase';
+import { supabaseClient } from '../../lib/supabase-client';
 
 // Get shipping method from localStorage
 function getShippingMethod(): 'delivery' | 'pickup' {

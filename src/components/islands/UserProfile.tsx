@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabaseClient } from '../../lib/supabase';
+import { supabaseClient } from '../../lib/supabase-client';
 import type { Order, Address } from '../../lib/types';
 
 interface User {

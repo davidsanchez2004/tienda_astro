@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabaseClient } from '../../lib/supabase';
+import { supabaseClient } from '../../lib/supabase-client';
 import { onUserLogin } from '../../stores/useCart';
 
 export default function LoginForm() {
