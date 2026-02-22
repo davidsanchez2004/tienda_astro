@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import AdminAnalytics from './AdminAnalytics';
 import AdminOrderList from './AdminOrderList';
 import AdminOrderDetail from './AdminOrderDetail';
 import AdminReturnsManager from './AdminReturnsManager';
@@ -34,7 +35,7 @@ function deleteCookie(name: string) {
 }
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'orders' | 'returns' | 'invoices' | 'products' | 'categories' | 'discounts' | 'blog' | 'newsletter'>('orders');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'returns' | 'invoices' | 'products' | 'categories' | 'discounts' | 'blog' | 'newsletter'>('analytics');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,9 @@ export default function AdminDashboard() {
       fetchOrders(adminKey);
     }
   }, [activeTab, isAuthenticated, adminKey]);
+
+  // No mostrar loading spinner si estamos en analytics (tiene su propio loading)
+  const showMainLoading = loading && activeTab === 'orders';
 
   const fetchOrders = async (key: string) => {
     try {
@@ -135,7 +139,7 @@ export default function AdminDashboard() {
     return matchesFilter && matchesSearch;
   });
 
-  if (loading) {
+  if (showMainLoading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 text-center">
@@ -182,10 +186,21 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="max-w-7xl mx-auto px-4 border-t border-gray-200">
-          <div className="flex gap-8">
+          <div className="flex gap-8 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`py-4 px-4 font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'analytics'
+                  ? 'border-[#D4C5B9] text-[#8B7355]'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
+              Analíticas
+            </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`py-4 px-4 font-medium border-b-2 transition-colors ${
+              className={`py-4 px-4 font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === 'orders'
                   ? 'border-[#D4C5B9] text-[#8B7355]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -275,7 +290,9 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === 'orders' ? (
+        {activeTab === 'analytics' ? (
+          <AdminAnalytics />
+        ) : activeTab === 'orders' ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main content */}
             <div className="lg:col-span-2">
