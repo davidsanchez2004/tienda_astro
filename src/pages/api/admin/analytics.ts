@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     const { data: monthlyReturns, error: returnsError } = await supabaseAdminClient
       .from('returns')
       .select('refund_amount')
-      .gte('completed_at', firstDayOfMonth)
+      .gte('updated_at', firstDayOfMonth)
       .eq('status', 'completed');
 
     if (returnsError) throw new Error(`Error devoluciones: ${returnsError.message}`);
