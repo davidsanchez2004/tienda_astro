@@ -64,6 +64,68 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
       updateData.refund_status = 'completed';
     }
 
+    // --- REPONER STOCK al completar la devolución ---
+    if (status === 'completed') {
+      try {
+        // Obtener los items devueltos
+        const { data: returnItems, error: riError } = await supabaseAdminClient
+          .from('return_items')
+          .select('product_id, quantity')
+          .eq('return_id', returnId);
+
+        if (riError) {
+          console.error('[Return] Error fetching return items for stock:', riError.message);
+        } else if (returnItems && returnItems.length > 0) {
+          for (const item of returnItems) {
+            // Obtener stock actual
+            const { data: product, error: productError } = await supabaseAdminClient
+              .from('products')
+              .select('stock')
+              .eq('id', item.product_id)
+              .single();
+
+            if (productError || !product) {
+              console.error(`[Return] Product ${item.product_id} not found for stock replenish`);
+              continue;
+            }
+
+            const newStock = (product.stock || 0) + (item.quantity || 1);
+            const { error: stockError } = await supabaseAdminClient
+              .from('products')
+              .update({ stock: newStock, updated_at: new Date().toISOString() })
+              .eq('id', item.product_id);
+
+            if (stockError) {
+              console.error(`[Return] Error replenishing stock for ${item.product_id}:`, stockError.message);
+            } else {
+              console.log(`[Return] Stock replenished for product ${item.product_id}: +${item.quantity} → ${newStock}`);
+            }
+          }
+        }
+      } catch (stockErr) {
+        console.error('[Return] Error in stock replenishment:', stockErr);
+        // No falla la operación principal, el stock se puede corregir manualmente
+      }
+    }
+
+    // --- Actualizar status del pedido si la devolución se completa ---
+    if (status === 'completed' && returnData.order_id) {
+      try {
+        await supabaseAdminClient
+          .from('orders')
+          .update({
+            status: 'refunded',
+            refund_status: 'refunded',
+            refund_amount: returnData.refund_amount || 0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', returnData.order_id);
+        console.log(`[Return] Order ${returnData.order_id} marked as refunded`);
+      } catch (orderErr) {
+        console.error('[Return] Error updating order status:', orderErr);
+      }
+    }
+
     // Generar factura de devolución (nota de crédito) al completarse
     if (status === 'completed') {
       try {

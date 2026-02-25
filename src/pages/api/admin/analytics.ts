@@ -16,12 +16,13 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // 1. Ventas totales del mes (solo pedidos pagados)
+    // 1. Ventas totales del mes (solo pedidos pagados, excluyendo reembolsados)
     const { data: monthlySales, error: salesError } = await supabaseAdminClient
       .from('orders')
       .select('total')
       .gte('created_at', firstDayOfMonth)
-      .eq('payment_status', 'paid');
+      .eq('payment_status', 'paid')
+      .neq('status', 'refunded');
 
     if (salesError) throw new Error(`Error ventas: ${salesError.message}`);
 
@@ -29,6 +30,28 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       (sum, order) => sum + (parseFloat(order.total) || 0),
       0
     );
+
+    // 1b. Devoluciones completadas del mes (para mostrar en dashboard)
+    const { data: monthlyReturns, error: returnsError } = await supabaseAdminClient
+      .from('returns')
+      .select('refund_amount')
+      .gte('completed_at', firstDayOfMonth)
+      .eq('status', 'completed');
+
+    if (returnsError) throw new Error(`Error devoluciones: ${returnsError.message}`);
+
+    const totalMonthlyRefunds = (monthlyReturns || []).reduce(
+      (sum, r) => sum + (parseFloat(r.refund_amount) || 0),
+      0
+    );
+
+    // 1c. Devoluciones pendientes (no completadas ni rechazadas)
+    const { count: pendingReturns, error: pendingRetError } = await supabaseAdminClient
+      .from('returns')
+      .select('*', { count: 'exact', head: true })
+      .not('status', 'in', '("completed","rejected","cancelled")');
+
+    if (pendingRetError) throw new Error(`Error devoluciones pendientes: ${pendingRetError.message}`);
 
     // 2. Pedidos pendientes
     const { count: pendingOrders, error: pendingError } = await supabaseAdminClient
@@ -71,12 +94,13 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       }
     }
 
-    // 4. Ventas de los últimos 7 días (agrupadas por día)
+    // 4. Ventas de los últimos 7 días (agrupadas por día, excluyendo reembolsados)
     const { data: weeklyOrders, error: weeklyError } = await supabaseAdminClient
       .from('orders')
       .select('total, created_at')
       .gte('created_at', sevenDaysAgo)
       .eq('payment_status', 'paid')
+      .neq('status', 'refunded')
       .order('created_at', { ascending: true });
 
     if (weeklyError) throw new Error(`Error semanal: ${weeklyError.message}`);
@@ -108,12 +132,13 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       };
     });
 
-    // 5. Total de pedidos del mes
+    // 5. Total de pedidos del mes (excluye reembolsados)
     const { count: monthlyOrderCount, error: monthCountError } = await supabaseAdminClient
       .from('orders')
       .select('*', { count: 'exact', head: true })
       .gte('created_at', firstDayOfMonth)
-      .eq('payment_status', 'paid');
+      .eq('payment_status', 'paid')
+      .neq('status', 'refunded');
 
     if (monthCountError) throw new Error(`Error conteo mensual: ${monthCountError.message}`);
 
@@ -133,6 +158,8 @@ export const GET: APIRoute = async ({ request, cookies }) => {
         topProduct,
         chartData,
         totalCustomers: totalCustomers || 0,
+        monthlyRefunds: Math.round(totalMonthlyRefunds * 100) / 100,
+        pendingReturns: pendingReturns || 0,
       }),
       {
         status: 200,

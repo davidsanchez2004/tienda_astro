@@ -26,6 +26,8 @@ interface AnalyticsData {
     total: number;
   }[];
   totalCustomers: number;
+  monthlyRefunds: number;
+  pendingReturns: number;
 }
 
 // Helpers para leer cookies
@@ -56,6 +58,12 @@ const TrophyIcon = () => (
 const UsersIcon = () => (
   <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+  </svg>
+);
+
+const ReturnIcon = () => (
+  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
   </svg>
 );
 
@@ -128,8 +136,13 @@ export default function AdminAnalytics() {
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl h-32 shadow-sm" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[4, 5, 6].map((i) => (
             <div key={i} className="bg-white rounded-xl h-32 shadow-sm" />
           ))}
         </div>
@@ -158,23 +171,24 @@ export default function AdminAnalytics() {
   if (!data) return null;
 
   const monthName = new Date().toLocaleString('es-ES', { month: 'long' });
+  const netSales = data.monthlySales - data.monthlyRefunds;
 
   return (
     <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Ventas del mes */}
+      {/* KPI Cards - fila 1 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Ventas netas del mes */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-                Ventas de {monthName}
+                Ventas netas de {monthName}
               </p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {data.monthlySales.toFixed(2)}&euro;
+                {netSales.toFixed(2)}&euro;
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                {data.monthlyOrderCount} pedidos pagados
+                {data.monthlyOrderCount} pedidos ・ {data.monthlySales.toFixed(2)}€ bruto
               </p>
             </div>
             <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
@@ -200,6 +214,32 @@ export default function AdminAnalytics() {
             </div>
           </div>
         </div>
+
+        {/* Devoluciones */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                Devoluciones
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {data.monthlyRefunds.toFixed(2)}&euro;
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                {data.pendingReturns > 0
+                  ? `${data.pendingReturns} pendiente${data.pendingReturns > 1 ? 's' : ''}`
+                  : 'Sin devoluciones pendientes'}
+              </p>
+            </div>
+            <div className={`p-3 rounded-xl ${data.pendingReturns > 0 ? 'bg-red-50 text-red-500' : 'bg-gray-50 text-gray-400'}`}>
+              <ReturnIcon />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Cards - fila 2 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
         {/* Producto más vendido */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
@@ -235,6 +275,26 @@ export default function AdminAnalytics() {
             </div>
             <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
               <UsersIcon />
+            </div>
+          </div>
+        </div>
+
+        {/* Balance neto */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                Balance {monthName}
+              </p>
+              <p className={`text-3xl font-bold mt-2 ${netSales >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                {netSales >= 0 ? '+' : ''}{netSales.toFixed(2)}&euro;
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                Ventas − Devoluciones
+              </p>
+            </div>
+            <div className={`p-3 rounded-xl ${netSales >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+              <ChartIcon />
             </div>
           </div>
         </div>
