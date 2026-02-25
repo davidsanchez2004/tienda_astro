@@ -333,6 +333,57 @@ export async function generateReturnInvoice(returnId: string): Promise<{ success
     }
 
     console.log(`[Invoice] Return invoice ${invoiceNumber} generated for return ${returnId}`);
+
+    // Enviar nota de crédito por email al cliente
+    const customerEmail = returnData.guest_email || order.guest_email;
+    if (customerEmail) {
+      try {
+        const returnNumber = returnData.return_number;
+        const siteUrl = process.env.PUBLIC_SITE_URL || 'https://byarena.com';
+        await sendEmailWithGmail({
+          to: customerEmail,
+          subject: `Nota de Crédito #${invoiceNumber} - Devolución #${returnNumber} - BY ARENA`,
+          html: `
+            <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+              <div style="text-align: center; padding: 30px 0; border-bottom: 2px solid #D4C5B9;">
+                <h1 style="color: #D4C5B9; font-size: 28px; letter-spacing: 2px; margin: 0;">BY ARENA</h1>
+              </div>
+              <div style="padding: 30px 20px;">
+                <h2 style="color: #333; margin-bottom: 10px;">Tu nota de crédito está lista</h2>
+                <p>Hola <strong>${customerName}</strong>,</p>
+                <p>Adjuntamos la nota de crédito correspondiente a tu devolución <strong>#${returnNumber}</strong>.</p>
+                <div style="background: #FFF5F5; border-left: 4px solid #E53935; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                  <p style="margin: 5px 0;"><strong>Nº Nota de Crédito:</strong> ${invoiceNumber}</p>
+                  <p style="margin: 5px 0;"><strong>Nº Devolución:</strong> ${returnNumber}</p>
+                  <p style="margin: 5px 0;"><strong>Importe reembolsado:</strong> €${refundAmount.toFixed(2)}</p>
+                  <p style="margin: 5px 0;"><strong>Fecha:</strong> ${formatDateES(now)}</p>
+                </div>
+                <p>Encontrarás el PDF de la nota de crédito adjunto a este correo.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${siteUrl}/api/invoice/${returnId}?type=return" style="display: inline-block; background: #D4C5B9; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                    Descargar Nota de Crédito
+                  </a>
+                </div>
+                <p style="color: #666; font-size: 14px; margin-top: 30px;">El reembolso puede tardar 3-5 días hábiles en reflejarse en tu cuenta bancaria.</p>
+              </div>
+              <div style="text-align: center; padding: 20px; border-top: 1px solid #eee; color: #999; font-size: 12px;">
+                <p>BY ARENA - Bisutería y Complementos Premium</p>
+                <p>www.byarena.com | hola@byarena.com</p>
+              </div>
+            </div>
+          `,
+          attachments: [{
+            filename: `${invoiceNumber}.pdf`,
+            content: Buffer.from(pdfBytes),
+            contentType: 'application/pdf',
+          }],
+        });
+        console.log(`[Invoice] Return invoice email sent to ${customerEmail}`);
+      } catch (emailErr) {
+        console.error('[Invoice] Error sending return invoice email:', emailErr);
+      }
+    }
+
     return { success: true, invoiceId: invoice.id };
   } catch (err) {
     console.error('[Invoice] Error generating return invoice:', err);

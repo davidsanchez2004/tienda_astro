@@ -10,12 +10,24 @@ interface User {
   };
 }
 
+interface Return {
+  id: string;
+  order_id: string;
+  return_number: string;
+  status: string;
+  reason: string;
+  refund_amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function UserProfile() {
   const [user, setUser] = useState<User | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [returns, setReturns] = useState<Return[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pedidos' | 'direcciones' | 'datos'>('pedidos');
+  const [activeTab, setActiveTab] = useState<'pedidos' | 'devoluciones' | 'direcciones' | 'datos'>('pedidos');
 
   useEffect(() => {
     // Cargar usuario al montar
@@ -71,6 +83,31 @@ export default function UserProfile() {
       uniqueOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
       setOrders(uniqueOrders);
+
+      // Load returns
+      const { data: userReturns } = await supabaseClient
+        .from('returns')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      let guestReturns: Return[] = [];
+      if (currentUser.email) {
+        const { data: gData } = await supabaseClient
+          .from('returns')
+          .select('*')
+          .eq('guest_email', currentUser.email)
+          .is('user_id', null)
+          .order('created_at', { ascending: false });
+        guestReturns = gData || [];
+      }
+
+      const allReturns = [...(userReturns || []), ...guestReturns];
+      const uniqueReturns = allReturns.filter(
+        (r, i, self) => i === self.findIndex(x => x.id === r.id)
+      );
+      uniqueReturns.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setReturns(uniqueReturns);
 
       // Load addresses
       const { data: addressesData } = await supabaseClient
@@ -133,6 +170,16 @@ export default function UserProfile() {
               Mis Pedidos
             </button>
             <button
+              onClick={() => setActiveTab('devoluciones')}
+              className={`w-full text-left px-4 py-2 rounded transition-colors ${
+                activeTab === 'devoluciones'
+                  ? 'bg-arena text-white'
+                  : 'text-gray-700 hover:bg-arena-pale'
+              }`}
+            >
+              Devoluciones {returns.length > 0 && <span className="ml-1 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{returns.length}</span>}
+            </button>
+            <button
               onClick={() => setActiveTab('direcciones')}
               className={`w-full text-left px-4 py-2 rounded transition-colors ${
                 activeTab === 'direcciones'
@@ -183,6 +230,7 @@ export default function UserProfile() {
                         order.status === 'delivered' ? 'bg-green-100 text-green-700' :
                         order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
                         order.status === 'paid' ? 'bg-yellow-100 text-yellow-700' :
+                        order.status === 'refunded' ? 'bg-red-100 text-red-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
                         {order.status === 'delivered' && 'Entregado'}
@@ -190,6 +238,7 @@ export default function UserProfile() {
                         {order.status === 'paid' && 'Pagado'}
                         {order.status === 'pending' && 'Pendiente'}
                         {order.status === 'cancelled' && 'Cancelado'}
+                        {order.status === 'refunded' && 'Reembolsado'}
                       </span>
                     </div>
 
@@ -200,7 +249,7 @@ export default function UserProfile() {
                       )}
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <a
                         href={`/pedido/${order.id}`}
                         className="px-4 py-2 text-arena font-semibold hover:bg-arena-pale rounded transition-colors border border-arena"
@@ -208,7 +257,8 @@ export default function UserProfile() {
                         Ver Detalles
                       </a>
                       <a
-                        href={`/factura/${order.id}`}
+                        href={`/api/invoice/${order.id}`}
+                        target="_blank"
                         className="px-4 py-2 text-arena font-semibold hover:bg-arena-pale rounded transition-colors border border-arena"
                       >
                         Descargar Factura
@@ -231,6 +281,86 @@ export default function UserProfile() {
                 <a href="/catalogo" className="text-arena font-semibold hover:text-arena-light">
                   Empezar a comprar
                 </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Devoluciones */}
+        {activeTab === 'devoluciones' && (
+          <div className="space-y-6">
+            <h3 className="text-2xl font-serif font-bold text-gray-900">Mis Devoluciones</h3>
+
+            {returns.length > 0 ? (
+              <div className="space-y-4">
+                {returns.map(ret => {
+                  const statusLabels: Record<string, string> = {
+                    pending: 'Pendiente',
+                    approved: 'Aprobada',
+                    rejected: 'Rechazada',
+                    shipped: 'Enviado',
+                    received: 'Recibido',
+                    completed: 'Completada',
+                    cancelled: 'Cancelada',
+                  };
+                  const statusColors: Record<string, string> = {
+                    pending: 'bg-yellow-100 text-yellow-700',
+                    approved: 'bg-blue-100 text-blue-700',
+                    rejected: 'bg-red-100 text-red-700',
+                    shipped: 'bg-purple-100 text-purple-700',
+                    received: 'bg-indigo-100 text-indigo-700',
+                    completed: 'bg-green-100 text-green-700',
+                    cancelled: 'bg-gray-100 text-gray-700',
+                  };
+                  const reasonLabels: Record<string, string> = {
+                    defective: 'Producto defectuoso',
+                    wrong_item: 'Producto incorrecto',
+                    not_as_described: 'No es como se describía',
+                    changed_mind: 'Cambio de opinión',
+                    other: 'Otro motivo',
+                  };
+
+                  return (
+                    <div key={ret.id} className="bg-white rounded-lg border border-arena-light p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600">Devolución #{ret.return_number}</p>
+                          <p className="text-2xl font-bold text-red-600">-€{ret.refund_amount.toFixed(2)}</p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColors[ret.status] || 'bg-gray-100 text-gray-700'}`}>
+                          {statusLabels[ret.status] || ret.status}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-gray-600 mb-4">
+                        <p>Razón: {reasonLabels[ret.reason] || ret.reason}</p>
+                        <p>Fecha: {new Date(ret.created_at).toLocaleDateString('es-ES')}</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href={`/pedido/${ret.order_id}`}
+                          className="px-4 py-2 text-arena font-semibold hover:bg-arena-pale rounded transition-colors border border-arena"
+                        >
+                          Ver Pedido Original
+                        </a>
+                        {ret.status === 'completed' && (
+                          <a
+                            href={`/api/invoice/${ret.id}?type=return`}
+                            target="_blank"
+                            className="px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded transition-colors border border-red-300"
+                          >
+                            Descargar Nota de Crédito
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-lg text-gray-600 mb-4">No tienes devoluciones</p>
               </div>
             )}
           </div>

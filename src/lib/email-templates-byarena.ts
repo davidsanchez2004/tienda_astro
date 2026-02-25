@@ -519,6 +519,12 @@ export function generateOrderConfirmationCustomer(data: OrderEmailData): string 
         <a href="${SITE_URL}/mis-pedidos" class="cta-button">Ver mi pedido</a>
       </div>
       
+      <div style="text-align: center; margin-top: 15px;">
+        <a href="${SITE_URL}/api/invoice/${data.orderId}" style="display: inline-block; background: #555; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">
+          📄 Descargar Factura
+        </a>
+      </div>
+      
       <div style="text-align: center; margin-top: 20px;">
         <div class="whatsapp-box">
           Dudas? <a href="https://wa.me/${WHATSAPP_NUMBER}">Escribenos por WhatsApp</a>
@@ -1337,6 +1343,7 @@ export function generateContactNotificationAdmin(data: {
 export interface ReturnStatusUpdateData {
   customerName: string;
   returnNumber: string;
+  returnId?: string;
   status: string;
   statusMessage: string;
   refundAmount: number;
@@ -1415,6 +1422,13 @@ export function generateReturnStatusUpdateEmail(data: ReturnStatusUpdateData): s
             El reembolso puede tardar 3-5 días hábiles en reflejarse en tu cuenta.
           </p>
         </div>
+        ${data.returnId ? `
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${SITE_URL}/api/invoice/${data.returnId}?type=return" style="display: inline-block; background: #E53935; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">
+            📄 Descargar Nota de Crédito
+          </a>
+        </div>
+        ` : ''}
       ` : ''}
       
       ${data.status === 'rejected' ? `

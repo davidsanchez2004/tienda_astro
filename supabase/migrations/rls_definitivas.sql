@@ -152,6 +152,19 @@ CREATE POLICY "coupons_select_public"
   ON coupons FOR SELECT
   USING (true);
 
+-- -------------------------------------------------
+-- RETURNS
+-- Usado por: UserProfile.tsx (SELECT devoluciones propias)
+-- INSERT/UPDATE van por API con service_role
+-- -------------------------------------------------
+CREATE POLICY "returns_select_own"
+  ON returns FOR SELECT
+  USING (
+    auth.uid() = user_id
+    OR user_id IS NULL
+    OR guest_email = (auth.jwt()->>'email')
+  );
+
 -- =====================================================
 -- PASO 4: Tablas SIN políticas anon (solo service_role)
 -- =====================================================
@@ -162,7 +175,7 @@ CREATE POLICY "coupons_select_public"
 --
 -- Tablas protegidas:
 --   carts, cart_items, wishlist_items, support_tickets,
---   returns, return_items, webhook_logs, discount_codes,
+--   return_items, webhook_logs, discount_codes,
 --   discount_code_usage, newsletter_subscribers, blog_posts,
 --   invoices, activity_logs, promos, packs, abandoned_carts,
 --   auto_coupon_rules, auto_coupon_sent_log

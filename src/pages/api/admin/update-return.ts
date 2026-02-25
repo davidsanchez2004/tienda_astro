@@ -180,6 +180,7 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
               data: {
                 customerName,
                 returnNumber: returnData.return_number,
+                returnId: returnId,
                 status,
                 statusMessage: statusMessages[status],
                 refundAmount: returnData.refund_amount,

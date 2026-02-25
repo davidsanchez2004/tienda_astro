@@ -3,17 +3,47 @@ import { supabaseAdminClient } from '../../../lib/supabase';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ params }) => {
+export const GET: APIRoute = async ({ params, url }) => {
   const { id } = params;
-
-  console.log('[Invoice API] Request for order:', id);
+  const type = url.searchParams.get('type') || 'purchase'; // 'purchase' or 'return'
 
   if (!id) {
-    return new Response('ID de pedido no proporcionado', { status: 400 });
+    return new Response('ID no proporcionado', { status: 400 });
   }
 
   try {
-    // Obtener el pedido
+    // 1) Intentar servir el PDF real guardado en la BD
+    let invoiceQuery = supabaseAdminClient
+      .from('invoices')
+      .select('id, invoice_number, pdf_data, type');
+
+    if (type === 'return') {
+      // Para devoluciones, id = return_id
+      invoiceQuery = invoiceQuery.eq('return_id', id).eq('type', 'return');
+    } else {
+      // Para compras, id = order_id
+      invoiceQuery = invoiceQuery.eq('order_id', id).eq('type', 'purchase');
+    }
+
+    const { data: invoice } = await invoiceQuery.order('created_at', { ascending: false }).limit(1).single();
+
+    if (invoice?.pdf_data) {
+      const pdfBuffer = Buffer.from(invoice.pdf_data, 'base64');
+      return new Response(pdfBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `inline; filename="${invoice.invoice_number}.pdf"`,
+          'Content-Length': pdfBuffer.length.toString(),
+        },
+      });
+    }
+
+    // 2) Fallback: si no hay PDF en BD, generar HTML imprimible (solo para compras)
+    if (type === 'return') {
+      return new Response('Factura de devolución no encontrada', { status: 404 });
+    }
+
     const { data: order, error: orderError } = await supabaseAdminClient
       .from('orders')
       .select('*')
@@ -24,7 +54,6 @@ export const GET: APIRoute = async ({ params }) => {
       return new Response('Pedido no encontrado', { status: 404 });
     }
 
-    // Obtener los items del pedido
     const { data: orderItems } = await supabaseAdminClient
       .from('order_items')
       .select('*, products(name, image_url)')
