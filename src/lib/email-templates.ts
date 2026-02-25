@@ -27,7 +27,7 @@ export function generateOrderConfirmationHTML(props: OrderConfirmationEmailProps
         <p style="margin: 0; color: #666;">${item.quantity}</p>
       </td>
       <td style="padding: 12px; border-bottom: 1px solid #eee; text-align: right;">
-        <p style="margin: 0; color: #333; font-weight: 600;">$${item.price.toFixed(2)}</p>
+        <p style="margin: 0; color: #333; font-weight: 600;">€${item.price.toFixed(2)}</p>
       </td>
     </tr>
   `
@@ -91,7 +91,7 @@ export function generateOrderConfirmationHTML(props: OrderConfirmationEmailProps
             ${itemsHTML}
             <tr style="background: #f5f5f5; font-weight: 600;">
               <td colspan="2" style="padding: 12px; text-align: right;">Total:</td>
-              <td style="padding: 12px; text-align: right;">$${total.toFixed(2)}</td>
+              <td style="padding: 12px; text-align: right;">€${total.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
@@ -124,7 +124,7 @@ export function generateOrderConfirmationPlainText(props: OrderConfirmationEmail
   const { orderId, email, customerName, items, total, shippingAddress, checkoutType } = props;
   
   const itemsText = items
-    .map(item => `- ${item.name} x${item.quantity}: $${item.price.toFixed(2)}`)
+    .map(item => `- ${item.name} x${item.quantity}: €${item.price.toFixed(2)}`)
     .join('\n');
 
   return `
@@ -143,7 +143,7 @@ DIRECCIÓN: ${shippingAddress}
 ARTÍCULOS ORDENADOS:
 ${itemsText}
 
-TOTAL: $${total.toFixed(2)}
+TOTAL: €${total.toFixed(2)}
 
 ¿QUÉ SIGUE?
 - Procesaremos tu orden en las próximas 24 horas

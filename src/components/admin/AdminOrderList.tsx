@@ -63,7 +63,7 @@ export default function AdminOrderList({ orders, selectedOrder, onSelectOrder }:
                 minute: '2-digit',
               })}
             </p>
-            <p className="font-semibold text-arena">${order.total.toFixed(2)}</p>
+            <p className="font-semibold text-arena">€{order.total.toFixed(2)}</p>
           </div>
         </button>
       ))}

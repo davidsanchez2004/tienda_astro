@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
       html = generateRefundNotificationHTML(body.orderId, body.refundAmount, body.reason, customerName || 'Cliente');
       subject = `Tu Reembolso ha sido Procesado ✓`;
-      text = `Hola ${customerName}, tu reembolso de $${body.refundAmount.toFixed(2)} para la orden #${body.orderId} ha sido procesado.`;
+      text = `Hola ${customerName}, tu reembolso de €${body.refundAmount.toFixed(2)} para la orden #${body.orderId} ha sido procesado.`;
     } else if (template === 'return_request' || type === 'return_request') {
       if (!toEmail || !data) {
         return new Response(

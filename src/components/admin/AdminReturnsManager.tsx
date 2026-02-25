@@ -221,7 +221,7 @@ export default function AdminReturnsManager() {
               </div>
               <div className="flex items-center justify-between text-sm">
                 <p className="text-gray-500">
-                  Razón: {reasonLabels[ret.reason] || ret.reason} | Monto: ${ret.refund_amount.toFixed(2)}
+                  Razón: {reasonLabels[ret.reason] || ret.reason} | Monto: €{ret.refund_amount.toFixed(2)}
                 </p>
                 <p className="text-gray-500">
                   {new Date(ret.created_at).toLocaleDateString('es-ES')}
@@ -347,7 +347,7 @@ export default function AdminReturnsManager() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Monto a Reembolsar</p>
-                  <p className="font-bold text-green-600">${selectedReturn.refund_amount.toFixed(2)}</p>
+                  <p className="font-bold text-green-600">€{selectedReturn.refund_amount.toFixed(2)}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-xs text-gray-500 uppercase">Razón</p>

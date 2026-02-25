@@ -250,7 +250,7 @@ export default function WebhookMonitor() {
                         {order.customer_email || order.guest_email}
                       </td>
                       <td className="px-4 py-2 font-medium">
-                        ${order.total_amount.toFixed(2)}
+                        €{order.total_amount.toFixed(2)}
                       </td>
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.payment_status)}`}>
@@ -260,7 +260,7 @@ export default function WebhookMonitor() {
                       <td className="px-4 py-2">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.refund_status)}`}>
                           {order.refund_status}
-                          {order.refund_amount && ` ($${order.refund_amount.toFixed(2)})`}
+                          {order.refund_amount && ` (€${order.refund_amount.toFixed(2)})`}
                         </span>
                       </td>
                       <td className="px-4 py-2 text-xs">

@@ -169,7 +169,7 @@ export function generateRefundNotificationHTML(
           <p><strong>Número de Orden:</strong> #${orderId}</p>
           <p><strong>Motivo:</strong> ${reason}</p>
           <p><strong>Monto del Reembolso:</strong></p>
-          <p class="refund-amount">$${refundAmount.toFixed(2)}</p>
+          <p class="refund-amount">€${refundAmount.toFixed(2)}</p>
           <p style="font-size: 12px; color: #666; margin-top: 10px;">
             El reembolso se reflejará en tu cuenta dentro de 3-5 días hábiles.
           </p>
@@ -242,7 +242,7 @@ export function generateReturnRequestHTML(
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 15px 0;">
           <div>
             <div class="info-label">Monto a Reembolsar</div>
-            <div class="info-value" style="color: #10B981;">$${refundAmount.toFixed(2)}</div>
+            <div class="info-value" style="color: #10B981;">€${refundAmount.toFixed(2)}</div>
           </div>
         </div>
 
@@ -312,7 +312,7 @@ DETALLES DE LA DEVOLUCIÓN
 Número de Orden Original: ${orderNumber}
 Número de Devolución: ${returnNumber}
 Razón: ${reason}
-Monto a Reembolsar: $${refundAmount.toFixed(2)}
+Monto a Reembolsar: €${refundAmount.toFixed(2)}
 
 =====================================
 PRÓXIMOS PASOS
@@ -388,7 +388,7 @@ export function generatePaymentConfirmedHTML(orderNumber: string, amount: number
           </div>
           <div class="info-row">
             <span class="label">Monto Pagado</span>
-            <span class="amount">$${amount.toFixed(2)}</span>
+            <span class="amount">€${amount.toFixed(2)}</span>
           </div>
         </div>
 
@@ -426,7 +426,7 @@ Tu orden ha sido procesada exitosamente.
 DETALLES DE LA ORDEN
 ====================
 Número de Orden: ${orderNumber}
-Monto Pagado: $${amount.toFixed(2)}
+Monto Pagado: €${amount.toFixed(2)}
 
 PRÓXIMOS PASOS
 ==============
@@ -590,7 +590,7 @@ export function generateRefundConfirmedHTML(orderNumber: string, refundAmount: n
 
         <div class="refund-info">
           <h3>Monto del Reembolso</h3>
-          <p class="amount">$${refundAmount.toFixed(2)}</p>
+          <p class="amount">€${refundAmount.toFixed(2)}</p>
           <p style="margin: 10px 0 0 0; color: #666;">Número de Orden: <strong>${orderNumber}</strong></p>
         </div>
 
@@ -642,7 +642,7 @@ Tu reembolso ha sido aprobado exitosamente.
 
 DETALLES DEL REEMBOLSO
 ======================
-Monto: $${refundAmount.toFixed(2)}
+Monto: €${refundAmount.toFixed(2)}
 Número de Orden: ${orderNumber}
 
 ¿CUÁNDO RECIBIRÉ EL DINERO?
@@ -714,7 +714,7 @@ export function generateDisputeNotificationHTML(orderNumber: string, disputeId: 
           </div>
           <div class="info-row">
             <span class="label">Monto</span>
-            <span class="value">$${amount.toFixed(2)}</span>
+            <span class="value">€${amount.toFixed(2)}</span>
           </div>
           <div class="info-row">
             <span class="label">Razón</span>
@@ -746,7 +746,7 @@ DETALLES
 ========
 Número de Orden: ${orderNumber}
 ID de Disputa: ${disputeId}
-Monto: $${amount.toFixed(2)}
+Monto: €${amount.toFixed(2)}
 Razón: ${reason}
 
 ACCIÓN REQUERIDA
