@@ -360,151 +360,53 @@ CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON webhook_logs(created_a
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =====================================================
+-- ARQUITECTURA: supabaseAdminClient (service_role) bypasea RLS.
+-- Solo necesitamos políticas para el anon key (client-side).
+-- Tablas sin políticas anon = protegidas de acceso público.
+-- =====================================================
 
--- Users RLS
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own data" ON users
-  FOR SELECT USING (auth.uid() = id);
-
-CREATE POLICY "Users can update own data" ON users
-  FOR UPDATE USING (auth.uid() = id);
-
-CREATE POLICY "Admins can view all users" ON users
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Products RLS
+-- --- PRODUCTS: lectura pública (CartDisplay, catálogo) ---
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "products_select_public" ON products FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can view active products" ON products
-  FOR SELECT USING (active = true);
-
-CREATE POLICY "Admins can manage products" ON products
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Categories RLS
+-- --- CATEGORIES: lectura pública ---
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "categories_select_public" ON categories FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can view categories" ON categories
-  FOR SELECT USING (true);
+-- --- USERS: perfil propio (registro, login, perfil) ---
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "users_insert_own_profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "users_select_own_profile" ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "users_update_own_profile" ON users FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
 
-CREATE POLICY "Admins can manage categories" ON categories
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Orders RLS
+-- --- ORDERS: checkout guest+registrado, lectura propios ---
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "orders_insert_public" ON orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "orders_select_own" ON orders FOR SELECT USING (
+  auth.uid() = user_id
+  OR user_id IS NULL
+  OR guest_email = (auth.jwt()->>'email')
+);
 
-CREATE POLICY "Users can view own orders" ON orders
-  FOR SELECT USING (auth.uid() = user_id);
+-- --- ORDER_ITEMS: insert durante checkout ---
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "order_items_insert_public" ON order_items FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Anyone can create orders" ON orders
-  FOR INSERT WITH CHECK (
-    (auth.uid() = user_id) OR (user_id IS NULL)
-  );
-
-CREATE POLICY "Admins can view all orders" ON orders
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
-CREATE POLICY "Admins can update orders" ON orders
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Addresses RLS
+-- --- ADDRESSES: lectura de direcciones propias ---
 ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "addresses_select_own" ON addresses FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can view own addresses" ON addresses
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own addresses" ON addresses
-  FOR ALL USING (auth.uid() = user_id);
-
--- Cart RLS
-ALTER TABLE carts ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own cart" ON carts
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can manage own cart" ON carts
-  FOR ALL USING (auth.uid() = user_id);
-
--- Cart items RLS
-ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own cart items" ON cart_items
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM carts WHERE id = cart_id AND user_id = auth.uid())
-  );
-
--- Wishlist RLS
-ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage own wishlist" ON wishlist_items
-  FOR ALL USING (auth.uid() = user_id);
-
--- Support tickets RLS
-ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own tickets" ON support_tickets
-  FOR SELECT USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can create tickets" ON support_tickets
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
--- Returns RLS
-ALTER TABLE returns ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own returns" ON returns
-  FOR SELECT USING (
-    (auth.uid() = user_id) OR
-    (guest_email IS NOT NULL) OR
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
-CREATE POLICY "Users can create returns" ON returns
-  FOR INSERT WITH CHECK (
-    (auth.uid() = user_id) OR (user_id IS NULL)
-  );
-
-CREATE POLICY "Admins can update returns" ON returns
-  FOR UPDATE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
-CREATE POLICY "Admins can delete returns" ON returns
-  FOR DELETE USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Coupons RLS
+-- --- COUPONS: lectura pública (validación) ---
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "coupons_select_public" ON coupons FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can view active coupons" ON coupons
-  FOR SELECT USING (active = true AND NOW() BETWEEN start_date AND end_date);
-
-CREATE POLICY "Admins can manage coupons" ON coupons
-  FOR ALL USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
--- Webhook logs RLS (admin only)
+-- --- Tablas solo service_role (sin políticas anon = acceso denegado a anon) ---
+ALTER TABLE carts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE returns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE webhook_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins can view webhook logs" ON webhook_logs
-  FOR SELECT USING (
-    EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
-  );
-
-CREATE POLICY "Service can insert webhook logs" ON webhook_logs
-  FOR INSERT WITH CHECK (true);
 
 -- =====================================================
 -- TRIGGERS AND FUNCTIONS
@@ -851,22 +753,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Política RLS para discount_codes (solo admin puede ver/modificar)
+-- RLS para discount_codes y discount_code_usage (solo service_role)
 ALTER TABLE discount_codes ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admin can manage discount codes"
-  ON discount_codes
-  FOR ALL
-  USING (TRUE)
-  WITH CHECK (TRUE);
-
--- Política RLS para discount_code_usage
 ALTER TABLE discount_code_usage ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can see their own usage"
-  ON discount_code_usage
-  FOR SELECT
-  USING (user_id = auth.uid() OR TRUE);
 
 -- Insertar algunos códigos de ejemplo
 INSERT INTO discount_codes (code, discount_type, discount_value, min_purchase, max_uses, valid_until, personal_message)
@@ -1033,26 +922,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
--- RLS Policies
+-- RLS Policies (solo service_role accede estas tablas)
 -- =====================================================
 
--- Newsletter: solo admin puede ver
 ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public insert on newsletter" ON newsletter_subscribers
-  FOR INSERT WITH CHECK (true);
-
-CREATE POLICY "Allow admin read on newsletter" ON newsletter_subscribers
-  FOR SELECT USING (true);
-
--- Blog: público puede leer posts publicados
 ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read published posts" ON blog_posts
-  FOR SELECT USING (published = true);
-
-CREATE POLICY "Allow admin full access on blog" ON blog_posts
-  FOR ALL USING (true);
 
 -- =====================================================
 -- Insertar algunos posts de ejemplo
@@ -1191,11 +1065,8 @@ CREATE TABLE IF NOT EXISTS return_items (
 CREATE INDEX IF NOT EXISTS idx_return_items_return_id ON return_items(return_id);
 CREATE INDEX IF NOT EXISTS idx_return_items_order_item_id ON return_items(order_item_id);
 
--- RLS (Row Level Security) - desactivar por ahora para admin
+-- RLS (solo service_role accede esta tabla)
 ALTER TABLE return_items ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Service role full access on return_items" ON return_items
-  FOR ALL USING (true) WITH CHECK (true);
 
 
 -- =====================================================
@@ -1235,16 +1106,9 @@ CREATE INDEX IF NOT EXISTS idx_auto_coupon_sent_rule_user
 CREATE INDEX IF NOT EXISTS idx_auto_coupon_rules_active 
   ON auto_coupon_rules(is_active) WHERE is_active = true;
 
--- RLS
+-- RLS (solo service_role accede estas tablas)
 ALTER TABLE auto_coupon_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auto_coupon_sent_log ENABLE ROW LEVEL SECURITY;
-
--- Solo admin (service role) puede gestionar reglas
-CREATE POLICY "Service role manage auto_coupon_rules" ON auto_coupon_rules
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE POLICY "Service role manage auto_coupon_sent_log" ON auto_coupon_sent_log
-  FOR ALL USING (auth.role() = 'service_role');
 
 -- Función para calcular gasto total de un usuario
 CREATE OR REPLACE FUNCTION get_user_total_spent(p_user_id UUID)

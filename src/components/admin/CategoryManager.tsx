@@ -15,6 +15,56 @@ interface Category {
   created_at: string;
 }
 
+// Componente de tarjeta individual con manejo de error de imagen
+function CategoryCard({ category, onEdit, onDelete }: {
+  category: Category;
+  onEdit: (c: Category) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const showFallback = !category.image_url || imgError;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="flex items-start gap-4">
+        {!showFallback ? (
+          <img
+            src={category.image_url!}
+            alt={category.name}
+            className="w-16 h-16 object-cover rounded-lg bg-gray-100 flex-shrink-0"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl font-bold text-gray-400">{category.name.charAt(0).toUpperCase()}</span>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900">{category.name}</h3>
+          <p className="text-sm text-gray-500">/{category.slug}</p>
+          {category.description && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-2">{category.description}</p>
+          )}
+        </div>
+      </div>
+      <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+        <button
+          onClick={() => onEdit(category)}
+          className="flex-1 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+        >
+          Editar
+        </button>
+        <button
+          onClick={() => onDelete(category.id)}
+          className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function CategoryManager() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -305,45 +355,12 @@ export default function CategoryManager() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {categories.map((category) => (
-            <div
+            <CategoryCard
               key={category.id}
-              className="bg-white border border-gray-200 rounded-lg p-4"
-            >
-              <div className="flex items-start gap-4">
-                {category.image_url ? (
-                  <img 
-                    src={category.image_url} 
-                    alt={category.name}
-                    className="w-16 h-16 object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                  <p className="text-sm text-gray-500">/{category.slug}</p>
-                  {category.description && (
-                    <p className="text-xs text-gray-400 mt-1 line-clamp-2">{category.description}</p>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => handleEdit(category)}
-                  className="flex-1 px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDelete(category.id)}
-                  className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </div>
+              category={category}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       )}
