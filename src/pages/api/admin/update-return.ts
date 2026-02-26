@@ -53,15 +53,9 @@ export const PATCH: APIRoute = async ({ request, cookies }) => {
     if (adminNotes) updateData.admin_notes = adminNotes;
     if (refundStatus) updateData.refund_status = refundStatus;
 
-    // Si se aprueba, marcar fecha de aprobación
-    if (status === 'approved') {
-      updateData.approved_at = new Date().toISOString();
-    }
-
-    // Si se completa, marcar fecha de completado y reembolso
+    // Si se completa, marcar reembolso como procesado
     if (status === 'completed') {
-      updateData.completed_at = new Date().toISOString();
-      updateData.refund_status = 'completed';
+      updateData.refund_status = 'processed';
     }
 
     // --- REPONER STOCK al completar la devolución ---

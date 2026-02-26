@@ -1,9 +1,158 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // Helper para leer cookies
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return match ? decodeURIComponent(match[2]) : null;
+}
+
+// ============ WYSIWYG Editor Component ============
+interface WysiwygEditorProps {
+  value: string;
+  onChange: (html: string) => void;
+}
+
+function WysiwygEditor({ value, onChange }: WysiwygEditorProps) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [showSource, setShowSource] = useState(false);
+  const [sourceValue, setSourceValue] = useState(value);
+  const isInternalUpdate = useRef(false);
+
+  // Sync external value into editor only when not internally editing
+  useEffect(() => {
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+    if (editorRef.current && !showSource) {
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value;
+      }
+    }
+    setSourceValue(value);
+  }, [value, showSource]);
+
+  const execCmd = useCallback((command: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(command, false, val);
+    syncContent();
+  }, []);
+
+  const syncContent = useCallback(() => {
+    if (editorRef.current) {
+      isInternalUpdate.current = true;
+      onChange(editorRef.current.innerHTML);
+    }
+  }, [onChange]);
+
+  const handleSourceChange = (html: string) => {
+    setSourceValue(html);
+    isInternalUpdate.current = true;
+    onChange(html);
+  };
+
+  const toggleSource = () => {
+    if (showSource) {
+      // Switching from source to visual
+      if (editorRef.current) {
+        editorRef.current.innerHTML = sourceValue;
+      }
+    } else {
+      // Switching from visual to source
+      setSourceValue(editorRef.current?.innerHTML || '');
+    }
+    setShowSource(!showSource);
+  };
+
+  const insertLink = () => {
+    const url = prompt('URL del enlace:', 'https://');
+    if (url) execCmd('createLink', url);
+  };
+
+  const insertImage = () => {
+    const url = prompt('URL de la imagen:', 'https://');
+    if (url) execCmd('insertImage', url);
+  };
+
+  const ToolBtn = ({ cmd, icon, title, val }: { cmd: string; icon: string; title: string; val?: string }) => (
+    <button
+      type="button"
+      onClick={() => execCmd(cmd, val)}
+      title={title}
+      className="p-1.5 rounded hover:bg-gray-200 text-gray-700 text-sm font-medium transition-colors min-w-[32px]"
+    >
+      {icon}
+    </button>
+  );
+
+  return (
+    <div className="border border-gray-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-arena focus-within:border-transparent">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-gray-50 border-b border-gray-300">
+        <ToolBtn cmd="bold" icon="B" title="Negrita" />
+        <ToolBtn cmd="italic" icon="I" title="Cursiva" />
+        <ToolBtn cmd="underline" icon="U" title="Subrayado" />
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn cmd="formatBlock" icon="H2" title="Título grande" val="h2" />
+        <ToolBtn cmd="formatBlock" icon="H3" title="Subtítulo" val="h3" />
+        <ToolBtn cmd="formatBlock" icon="¶" title="Párrafo" val="p" />
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn cmd="insertUnorderedList" icon="• Lista" title="Lista con viñetas" />
+        <ToolBtn cmd="insertOrderedList" icon="1. Lista" title="Lista numerada" />
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <button
+          type="button"
+          onClick={insertLink}
+          title="Insertar enlace"
+          className="p-1.5 rounded hover:bg-gray-200 text-gray-700 text-sm transition-colors"
+        >
+          🔗 Enlace
+        </button>
+        <button
+          type="button"
+          onClick={insertImage}
+          title="Insertar imagen"
+          className="p-1.5 rounded hover:bg-gray-200 text-gray-700 text-sm transition-colors"
+        >
+          🖼️ Imagen
+        </button>
+        <div className="w-px h-5 bg-gray-300 mx-1" />
+        <ToolBtn cmd="justifyLeft" icon="⬅" title="Alinear izquierda" />
+        <ToolBtn cmd="justifyCenter" icon="⬛" title="Centrar" />
+        <ToolBtn cmd="justifyRight" icon="➡" title="Alinear derecha" />
+        <div className="flex-1" />
+        <button
+          type="button"
+          onClick={toggleSource}
+          className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+            showSource ? 'bg-arena text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          {showSource ? '👁 Visual' : '</> HTML'}
+        </button>
+      </div>
+
+      {/* Editor area */}
+      {showSource ? (
+        <textarea
+          value={sourceValue}
+          onChange={(e) => handleSourceChange(e.target.value)}
+          className="w-full px-4 py-3 font-mono text-sm min-h-[350px] resize-y focus:outline-none"
+          placeholder="<h2>Tu título</h2><p>Tu contenido aquí...</p>"
+        />
+      ) : (
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={syncContent}
+          onBlur={syncContent}
+          className="w-full px-4 py-3 min-h-[350px] focus:outline-none prose prose-sm max-w-none [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_p]:my-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_a]:text-arena [&_a]:underline [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-3"
+          dangerouslySetInnerHTML={{ __html: value }}
+          suppressContentEditableWarning
+        />
+      )}
+    </div>
+  );
 }
 
 interface BlogPost {
@@ -276,16 +425,15 @@ export default function BlogManager() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Contenido * (HTML)
+              Contenido *
             </label>
-            <textarea
+            <WysiwygEditor
               value={formData.content}
-              onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-              required
-              rows={15}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-arena focus:border-transparent font-mono text-sm"
-              placeholder="<h2>Título</h2><p>Contenido...</p>"
+              onChange={(html) => setFormData(prev => ({ ...prev, content: html }))}
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Usa la barra de herramientas para dar formato. Puedes cambiar a modo HTML con el botón &lt;/&gt;.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

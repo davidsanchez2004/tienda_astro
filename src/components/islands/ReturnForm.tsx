@@ -420,13 +420,13 @@ export default function ReturnForm({ orderId, orderNumber, orderTotal, customerE
       </div>
 
       {/* Terms */}
-      <div className="flex items-start gap-3">
-        <input type="checkbox" id="terms" className="mt-1" required />
-        <label htmlFor="terms" className="text-sm text-gray-600">
+      <label htmlFor="terms" className="flex items-start gap-3 cursor-pointer">
+        <input type="checkbox" id="terms" className="mt-0.5 flex-shrink-0 w-5 h-5 text-arena rounded border-gray-300 focus:ring-arena" required />
+        <span className="text-sm text-gray-600 leading-relaxed">
           Entiendo que el reembolso se procesará después de recibir e inspeccionar los artículos.
           Los gastos de envío original no son reembolsables.
-        </label>
-      </div>
+        </span>
+      </label>
 
       {/* Submit Button */}
       <button
