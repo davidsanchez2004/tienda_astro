@@ -23,6 +23,11 @@ export const GET: APIRoute = async ({ url }) => {
       query = query.eq('featured', true);
     }
 
+    const onOffer = url.searchParams.get('oferta');
+    if (onOffer === 'true') {
+      query = query.eq('on_offer', true);
+    }
+
     query = query.range(offset, offset + limit - 1);
 
     const { data, error, count } = await query;
