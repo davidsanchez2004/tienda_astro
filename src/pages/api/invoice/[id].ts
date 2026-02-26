@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { supabaseAdminClient } from '../../../lib/supabase';
+import { generateReturnInvoice } from '../../../lib/invoice-service';
 
 export const prerender = false;
 
@@ -39,8 +40,36 @@ export const GET: APIRoute = async ({ params, url }) => {
       });
     }
 
-    // 2) Fallback: si no hay PDF en BD, generar HTML imprimible (solo para compras)
+    // 2) Fallback para devoluciones: intentar generar la factura sobre la marcha
     if (type === 'return') {
+      try {
+        const result = await generateReturnInvoice(id);
+        if (result.success) {
+          // Reintentar leer el PDF recién generado
+          const { data: newInvoice } = await supabaseAdminClient
+            .from('invoices')
+            .select('id, invoice_number, pdf_data, type')
+            .eq('return_id', id)
+            .eq('type', 'return')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (newInvoice?.pdf_data) {
+            const pdfBuffer = Buffer.from(newInvoice.pdf_data, 'base64');
+            return new Response(pdfBuffer, {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `inline; filename="${newInvoice.invoice_number}.pdf"`,
+                'Content-Length': pdfBuffer.length.toString(),
+              },
+            });
+          }
+        }
+      } catch (genErr) {
+        console.error('Error generating return invoice on the fly:', genErr);
+      }
       return new Response('Factura de devolución no encontrada', { status: 404 });
     }
 

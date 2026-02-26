@@ -183,7 +183,7 @@ export default function GuestCheckoutForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: 'order_notification_admin',
-          to: 'admin@byarena.com',
+          to: 'davidsanchezacosta0@gmail.com',
           data: {
             orderId: orderData.id,
             orderNumber: orderData.id.slice(0, 8).toUpperCase(),

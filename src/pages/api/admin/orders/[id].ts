@@ -138,7 +138,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               template: 'delivery_notification_admin',
-              to: import.meta.env.ADMIN_EMAIL || 'admin@byarena.com',
+              to: import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com',
               data: orderData,
             }),
           });

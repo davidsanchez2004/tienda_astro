@@ -150,7 +150,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: 'return_request_admin',
-          to: import.meta.env.ADMIN_EMAIL || 'admin@byarena.com',
+          to: import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com',
           data: returnEmailData,
         }),
       });

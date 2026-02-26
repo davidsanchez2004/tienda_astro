@@ -47,7 +47,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<Uint
 
   // Título de la factura
   if (isReturn) {
-    drawText('NOTA DE CREDITO / ABONO', 18, redColor);
+    drawText('FACTURA DE DEVOLUCION', 18, redColor);
     drawText(`Ref: ${invoiceData.invoiceNumber}`, 12, textColor);
     if (invoiceData.returnNumber) {
       drawText(`Devolucion: ${invoiceData.returnNumber}`, 10, grayColor);
@@ -208,7 +208,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<Uint
   y = 70;
 
   if (isReturn) {
-    page.drawText('NOTA DE CREDITO - Este documento acredita un abono', {
+    page.drawText('FACTURA DE DEVOLUCION - Este documento acredita un abono', {
       x: margin,
       y,
       size: 10,

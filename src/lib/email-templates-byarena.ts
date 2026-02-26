@@ -25,7 +25,7 @@ const BRAND_COLORS = {
 // URL del logo de BY ARENA (Cloudinary)
 const LOGO_URL = 'https://res.cloudinary.com/dhs8kzjoo/image/upload/v1700000000/byarena/logo-byarena.png';
 const SITE_URL = import.meta.env.PUBLIC_SITE_URL || 'https://byarena.com';
-const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || 'admin@byarena.com';
+const ADMIN_EMAIL = import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com';
 const SUPPORT_EMAIL = 'hola@byarena.com';
 const WHATSAPP_NUMBER = import.meta.env.WHATSAPP_NUMBER || '34612345678';
 
@@ -1425,7 +1425,7 @@ export function generateReturnStatusUpdateEmail(data: ReturnStatusUpdateData): s
         ${data.returnId ? `
         <div style="text-align: center; margin: 20px 0;">
           <a href="${SITE_URL}/api/invoice/${data.returnId}?type=return" style="display: inline-block; background: #E53935; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">
-            📄 Descargar Nota de Crédito
+            📄 Descargar Factura de Devolución
           </a>
         </div>
         ` : ''}

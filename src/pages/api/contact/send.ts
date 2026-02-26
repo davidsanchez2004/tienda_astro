@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: 'contact_notification',
-          to: import.meta.env.ADMIN_EMAIL || 'admin@byarena.com',
+          to: import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com',
           data: {
             customerName: name,
             customerEmail: email,

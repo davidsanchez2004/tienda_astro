@@ -350,7 +350,7 @@ export default function UserProfile() {
                             target="_blank"
                             className="px-4 py-2 text-red-600 font-semibold hover:bg-red-50 rounded transition-colors border border-red-300"
                           >
-                            Descargar Nota de Crédito
+                            Descargar Factura de Devolución
                           </a>
                         )}
                       </div>

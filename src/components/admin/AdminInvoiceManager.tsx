@@ -362,7 +362,7 @@ export default function AdminInvoiceManager() {
 
               {/* Factura de devolución */}
               <div className="border border-gray-200 rounded-lg p-4 space-y-3">
-                <h4 className="font-medium text-red-700">Nota de Crédito (Devolución)</h4>
+                <h4 className="font-medium text-red-700">Factura de Devolución</h4>
                 <input
                   type="text"
                   placeholder="ID de la devolución (UUID)"
@@ -375,7 +375,7 @@ export default function AdminInvoiceManager() {
                   disabled={generating || !generateReturnId.trim()}
                   className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
                 >
-                  {generating ? 'Generando...' : 'Generar Nota de Crédito'}
+                  {generating ? 'Generando...' : 'Generar Factura de Devolución'}
                 </button>
               </div>
             </div>

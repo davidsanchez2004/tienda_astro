@@ -32,13 +32,13 @@ async function getAdminEmail(): Promise<string> {
     
     if (error || !data) {
       console.log('Using fallback admin email');
-      return import.meta.env.ADMIN_EMAIL || 'admin@byarena.com';
+      return import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com';
     }
     
     return data.value;
   } catch (err) {
     console.error('Error fetching admin email:', err);
-    return import.meta.env.ADMIN_EMAIL || 'admin@byarena.com';
+    return import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com';
   }
 }
 
@@ -74,7 +74,7 @@ interface SendEmailRequest {
 }
 
 // Constante para el email del admin
-const ADMIN_NOTIFICATION_EMAIL = import.meta.env.ADMIN_EMAIL || 'admin@byarena.com';
+const ADMIN_NOTIFICATION_EMAIL = import.meta.env.ADMIN_EMAIL || 'davidsanchezacosta0@gmail.com';
 
 export const POST: APIRoute = async ({ request }) => {
   try {
