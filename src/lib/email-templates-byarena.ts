@@ -630,7 +630,7 @@ export function generateOrderNotificationAdmin(data: OrderEmailData): string {
     </div>
   `;
 
-  return getBaseTemplate(content, `[Nuevo Pedido] #${data.orderNumber} - ${data.total.toFixed(2)} EUR`);
+  return getBaseTemplate(content, `[Nuevo Pedido] #${data.orderNumber} - ${data.total.toFixed(2)}€`);
 }
 
 /**
@@ -888,7 +888,7 @@ export function generateReturnRequestAdmin(data: ReturnEmailData): string {
     </div>
   `;
 
-  return getBaseTemplate(content, `Nueva devolucion #${data.returnNumber} - EUR${data.refundAmount.toFixed(2)}`);
+  return getBaseTemplate(content, `Nueva devolución #${data.returnNumber} - ${data.refundAmount.toFixed(2)}€`);
 }
 
 /**

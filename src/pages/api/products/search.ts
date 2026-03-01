@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     if (onOffer === 'true') {
-      dbQuery = dbQuery.eq('on_offer', true);
+      dbQuery = dbQuery.eq('on_offer', true).not('offer_price', 'is', null);
     }
 
     // Sort

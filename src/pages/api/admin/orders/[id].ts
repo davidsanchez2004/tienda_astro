@@ -48,7 +48,17 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
       updated_at: new Date().toISOString(),
     };
 
-    if (status) updateData.status = status;
+    // Validar status contra los valores permitidos en la BD
+    const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
+    if (status) {
+      if (!validStatuses.includes(status)) {
+        return new Response(
+          JSON.stringify({ error: `Estado no válido: ${status}. Valores permitidos: ${validStatuses.join(', ')}` }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      updateData.status = status;
+    }
     if (tracking_number) updateData.tracking_number = tracking_number;
     if (carrier) updateData.carrier = carrier;
     

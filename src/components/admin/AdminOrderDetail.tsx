@@ -15,7 +15,7 @@ interface Order {
   id: string;
   orderNumber: string;
   guest_email: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'refunded';
+  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   created_at: string;
   shipping_address?: string;
@@ -81,7 +81,8 @@ export default function AdminOrderDetail({ order, onOrderUpdated }: Props) {
       const statusMessages: Record<string, string> = {
         shipped: 'Pedido marcado como enviado. Email enviado al cliente.',
         delivered: 'Pedido marcado como entregado. Email enviado al cliente.',
-        processing: 'Pedido marcado como procesando.',
+        paid: 'Pedido marcado como pagado.',
+        cancelled: 'Pedido marcado como cancelado.',
       };
       
       setSuccess(statusMessages[newStatus] || 'Estado actualizado correctamente.');
@@ -106,10 +107,10 @@ export default function AdminOrderDetail({ order, onOrderUpdated }: Props) {
 
   const statusLabels: Record<string, string> = {
     pending: 'Pendiente',
-    processing: 'Procesando',
+    paid: 'Pagado',
     shipped: 'Enviado',
     delivered: 'Entregado',
-    refunded: 'Reembolsado',
+    cancelled: 'Cancelado',
   };
 
   return (
@@ -130,10 +131,11 @@ export default function AdminOrderDetail({ order, onOrderUpdated }: Props) {
             <p className="text-xs text-gray-600">Estado</p>
             <p className={`font-semibold px-3 py-1 rounded inline-block text-sm mt-1 ${
               order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-              order.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+              order.status === 'paid' ? 'bg-blue-100 text-blue-800' :
               order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
               order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-              'bg-red-100 text-red-800'
+              order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+              'bg-gray-100 text-gray-800'
             }`}>
               {statusLabels[order.status]}
             </p>

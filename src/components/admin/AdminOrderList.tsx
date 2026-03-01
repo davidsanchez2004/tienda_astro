@@ -4,7 +4,7 @@ interface Order {
   id: string;
   orderNumber: string;
   guest_email: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'refunded';
+  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   created_at: string;
 }
@@ -17,18 +17,18 @@ interface Props {
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-  processing: 'bg-blue-50 text-blue-700 border-blue-200',
+  paid: 'bg-blue-50 text-blue-700 border-blue-200',
   shipped: 'bg-purple-50 text-purple-700 border-purple-200',
   delivered: 'bg-green-50 text-green-700 border-green-200',
-  refunded: 'bg-red-50 text-red-700 border-red-200',
+  cancelled: 'bg-red-50 text-red-700 border-red-200',
 };
 
 const statusLabels: Record<string, string> = {
   pending: 'Pendiente',
-  processing: 'Procesando',
+  paid: 'Pagado',
   shipped: 'Enviado',
   delivered: 'Entregado',
-  refunded: 'Reembolsado',
+  cancelled: 'Cancelado',
 };
 
 export default function AdminOrderList({ orders, selectedOrder, onSelectOrder }: Props) {

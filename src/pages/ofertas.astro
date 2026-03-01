@@ -4,12 +4,13 @@ import { supabaseAdminClient } from '../lib/supabase';
 import ProductCard from '../components/islands/ProductCard';
 import NewsletterForm from '../components/islands/NewsletterForm';
 
-// Fetch products on offer
+// Fetch products on offer (only those with actual discount price set)
 const { data: products } = await supabaseAdminClient
   .from('products')
   .select('*')
   .eq('on_offer', true)
   .eq('active', true)
+  .not('offer_price', 'is', null)
   .order('created_at', { ascending: false });
 ---
 

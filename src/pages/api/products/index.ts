@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     const onOffer = url.searchParams.get('oferta');
     if (onOffer === 'true') {
-      query = query.eq('on_offer', true);
+      query = query.eq('on_offer', true).not('offer_price', 'is', null);
     }
 
     query = query.range(offset, offset + limit - 1);

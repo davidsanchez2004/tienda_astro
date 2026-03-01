@@ -13,7 +13,7 @@ interface Order {
   id: string;
   orderNumber: string;
   guest_email: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'refunded';
+  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   total: number;
   created_at: string;
   shipping_address?: string;
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'all' | 'pending' | 'processing' | 'shipped' | 'delivered'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [adminKey, setAdminKey] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
                       />
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                      {(['all', 'pending', 'processing', 'shipped', 'delivered'] as const).map(status => (
+                      {(['all', 'pending', 'paid', 'shipped', 'delivered', 'cancelled'] as const).map(status => (
                         <button
                           key={status}
                           onClick={() => setFilter(status)}
@@ -311,9 +311,10 @@ export default function AdminDashboard() {
                         >
                           {status === 'all' ? 'Todas' : 
                            status === 'pending' ? 'Pendiente' :
-                           status === 'processing' ? 'Procesando' :
+                           status === 'paid' ? 'Pagado' :
                            status === 'shipped' ? 'Enviado' :
-                           status === 'delivered' ? 'Entregado' : status}
+                           status === 'delivered' ? 'Entregado' :
+                           status === 'cancelled' ? 'Cancelado' : status}
                         </button>
                       ))}
                     </div>

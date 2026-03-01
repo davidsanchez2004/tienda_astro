@@ -62,10 +62,26 @@ export const POST: APIRoute = async ({ request }) => {
     // Generar número de devolución único
     const returnNumber = `RET-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Calcular monto de reembolso (basado en items seleccionados o total del pedido)
-    let refundAmount = order.total;
+    // Calcular monto de reembolso: solo el valor de los artículos, SIN incluir envío
+    // Si se envían items individuales, sumar solo esos; si no, usar subtotal (total - envío)
+    let refundAmount: number;
     if (items && items.length > 0) {
-      refundAmount = items.reduce((sum: number, item: ReturnItemInput) => sum + (item.price * item.quantity), 0);
+      // Verificar precios contra la BD para evitar manipulación
+      const { data: orderItems } = await supabaseAdminClient
+        .from('order_items')
+        .select('id, price, quantity')
+        .eq('order_id', orderId);
+
+      refundAmount = items.reduce((sum: number, item: ReturnItemInput) => {
+        // Buscar el precio real en la BD
+        const dbItem = orderItems?.find((oi: any) => oi.id === item.orderItemId);
+        const verifiedPrice = dbItem ? dbItem.price : item.price;
+        return sum + (verifiedPrice * item.quantity);
+      }, 0);
+    } else {
+      // Devolución total: total del pedido menos gastos de envío
+      const shippingCost = order.shipping_cost || 0;
+      refundAmount = order.total - shippingCost;
     }
 
     // Crear solicitud de devolución
