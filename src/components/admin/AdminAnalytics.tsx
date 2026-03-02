@@ -188,7 +188,7 @@ export default function AdminAnalytics() {
                 {netSales.toFixed(2)}&euro;
               </p>
               <p className="text-sm text-gray-400 mt-1">
-                {data.monthlyOrderCount} pedidos ・ {data.monthlySales.toFixed(2)}€ bruto
+                {data.monthlyOrderCount} pedidos ・ {data.monthlySales.toFixed(2)}€ bruto (sin envío)
               </p>
             </div>
             <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
@@ -309,7 +309,7 @@ export default function AdminAnalytics() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Ventas - Últimos 7 días</h3>
-              <p className="text-sm text-gray-400">Ingresos diarios de pedidos pagados</p>
+              <p className="text-sm text-gray-400">Ingresos diarios (sin envío)</p>
             </div>
           </div>
           <button

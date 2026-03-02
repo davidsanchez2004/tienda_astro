@@ -17,9 +17,10 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // 1. Ventas totales del mes (solo pedidos pagados, excluyendo reembolsados)
+    // Usamos subtotal para excluir el coste de envío y reflejar solo el precio de los productos
     const { data: monthlySales, error: salesError } = await supabaseAdminClient
       .from('orders')
-      .select('total')
+      .select('subtotal')
       .gte('created_at', firstDayOfMonth)
       .eq('payment_status', 'paid')
       .neq('status', 'refunded');
@@ -27,7 +28,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     if (salesError) throw new Error(`Error ventas: ${salesError.message}`);
 
     const totalMonthlySales = (monthlySales || []).reduce(
-      (sum, order) => sum + (parseFloat(order.total) || 0),
+      (sum, order) => sum + (parseFloat(order.subtotal) || 0),
       0
     );
 
@@ -95,9 +96,10 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     }
 
     // 4. Ventas de los últimos 7 días (agrupadas por día, excluyendo reembolsados)
+    // Usamos subtotal para excluir el coste de envío del gráfico
     const { data: weeklyOrders, error: weeklyError } = await supabaseAdminClient
       .from('orders')
-      .select('total, created_at')
+      .select('subtotal, created_at')
       .gte('created_at', sevenDaysAgo)
       .eq('payment_status', 'paid')
       .neq('status', 'refunded')
@@ -117,7 +119,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     (weeklyOrders || []).forEach((order) => {
       const day = new Date(order.created_at).toISOString().split('T')[0];
       if (dailySales[day] !== undefined) {
-        dailySales[day] += parseFloat(order.total) || 0;
+        dailySales[day] += parseFloat(order.subtotal) || 0;
       }
     });
 
